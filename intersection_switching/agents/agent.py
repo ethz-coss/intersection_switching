@@ -124,8 +124,6 @@ class Agent:
                 if phase.ID not in self.movements[move].phases:
                     self.movements[move].phases.append(phase.ID)
 
-        del self.phases[0]
-        self.phases = {k-1: v for k,v in self.phases.items()}
 
     def set_phase(self, eng, phase):
         """

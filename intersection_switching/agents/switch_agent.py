@@ -25,6 +25,11 @@ class SwitchAgent(Agent):
         return None
 
 
+    def switch(self, eng, time, lane_vehs, lanes_count):
+        curr_phase = self.phase.ID
+        action = abs(curr_phase-1)
+        self.apply_action(eng, action, time, lane_vehs, lanes_count)
+
     def apply_action(self, eng, action, time, lane_vehs, lanes_count):
         self.update_arr_dep_veh_num(lane_vehs, lanes_count)
         super().apply_action(eng, action, time, lane_vehs, lanes_count)

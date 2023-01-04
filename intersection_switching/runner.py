@@ -116,38 +116,37 @@ def run_exp(environ, args, num_episodes, num_sim_steps, policies, policy_mapper,
             # Dispatch the observations to the model to get the tuple of actions
             actions = environ.actions  # .copy()
 
-
             # Execute the actions
             next_obs, rewards, dones, info = environ.step(actions)
 
-            if detailed_log:
-                environ.detailed_log()
+            # if detailed_log:
+            #     environ.detailed_log()
 
             # Update the model with the transitions observed by each agent
-            if environ.agents_type in ['learning', 'hybrid', 'denflow', 'presslight'] and environ.time > 15: 
-                for agent_id in rewards.keys():
-                    if rewards[agent_id]:
-                        state = torch.FloatTensor(obs[agent_id], device=device)
-                        reward = torch.tensor(
-                            [rewards[agent_id]], dtype=torch.float, device=device)
-                        done = torch.tensor(
-                            [dones[agent_id]], dtype=torch.bool, device=device)
-                        action = torch.tensor(
-                            [actions[agent_id]], device=device)
-                        next_state = torch.FloatTensor(
-                            next_obs[agent_id], device=device)
-                        policy_mapper(agent_id).memory.add(
-                            state, action, reward, next_state, done)
+            # if environ.agents_type in ['learning', 'hybrid', 'denflow', 'presslight'] and environ.time > 15: 
+            #     for agent_id in rewards.keys():
+            #         if rewards[agent_id]:
+            #             state = torch.FloatTensor(obs[agent_id], device=device)
+            #             reward = torch.tensor(
+            #                 [rewards[agent_id]], dtype=torch.float, device=device)
+            #             done = torch.tensor(
+            #                 [dones[agent_id]], dtype=torch.bool, device=device)
+            #             action = torch.tensor(
+            #                 [actions[agent_id]], device=device)
+            #             next_state = torch.FloatTensor(
+            #                 next_obs[agent_id], device=device)
+            #             policy_mapper(agent_id).memory.add(
+            #                 state, action, reward, next_state, done)
 
             step = (step+1) % 1  # environ.update_freq
-            if step == 0 and args.mode == 'train':
-                if environ.agents_type in ['learning', 'hybrid', 'denflow', 'presslight']:
-                    tau = 1e-3
-                    _loss = 0
-                    for policy in policies:
-                        _loss -= policy.optimize_model(
-                            gamma=args.gamma, tau=tau)
-                    logger.losses.append(-_loss)
+            # if step == 0 and args.mode == 'train':
+            #     if environ.agents_type in ['learning', 'hybrid', 'denflow', 'presslight']:
+            #         tau = 1e-3
+            #         _loss = 0
+            #         for policy in policies:
+            #             _loss -= policy.optimize_model(
+            #                 gamma=args.gamma, tau=tau)
+            #         logger.losses.append(-_loss)
                     # environ.eps = max(environ.eps-environ.eps_decay, environ.eps_end)
             obs = next_obs
 
@@ -171,14 +170,15 @@ def run_exp(environ, args, num_episodes, num_sim_steps, policies, policy_mapper,
 
         print_string = (f'Rew: {logger.reward:.4f}\t'
                         f'MeanTravelTime (sec): {environ.eng.get_average_travel_time():.2f}\t'
-                        f'FinishedVehicles: {environ.eng.get_finished_vehicle_count():.0f}\t'
+                        # f'FinishedVehicles: {environ.eng.get_finished_vehicle_count():.0f}\t'
+                        f'Vehicles: {len(environ.vehicles):.0f}\t'
                         )
         if detailed_log:
-            print_string += f'MeanDelay (sec/km): {np.mean(logger.delays[-1])}'
+            print_string += f'MeanDelay (sec/km): {np.mean(logger.delays[-1]):.2f}'
         print(print_string)
 
-    logger.save_log_file(environ)
-    logger.serialise_data(environ, policies[0])
+    # logger.save_log_file(environ)
+    # logger.serialise_data(environ, policies[0])
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

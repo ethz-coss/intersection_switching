@@ -42,9 +42,7 @@ class Environment(gym.Env):
 
         self.eps = self.eps_start
 
-        # warmup 
-        for _ in range(200):
-            self.eng.next_step()
+        self._warmup()
 
         self.time = 0
         random.seed(2)
@@ -100,6 +98,9 @@ class Environment(gym.Env):
         self.waiting_times = []
         self.stopped = {}
 
+    def _warmup(self):
+        for _ in range(50):
+            self.eng.next_step()
 
     @property
     def observation_space(self):
@@ -138,6 +139,10 @@ class Environment(gym.Env):
             self.lane_vehs = self.eng.get_lane_vehicles()
             self.lanes_count = self.eng.get_lane_vehicle_count()
 
+            # required to track distance of periodic trips
+            for veh_id, speed in veh_speeds.items():
+                self.vehicles[veh_id].distance += speed
+
             for lane_id, lane in self.lanes.items():
                 lane.update_flow_data(self.eng, self.lane_vehs)
                 lane.update_speeds(self, self.lane_vehs[lane_id], veh_speeds)
@@ -168,6 +173,9 @@ class Environment(gym.Env):
         #     if agent.time_to_act:
         #         agent.apply_action(self.eng, action, self.time,
         #                            self.lane_vehs, self.lanes_count)
+        for intersection in self.intersections.values():
+            intersection.switch(self.eng, self.time,
+                                   self.lane_vehs, self.lanes_count)
         pass
 
     def _get_obs(self):
@@ -183,8 +191,9 @@ class Environment(gym.Env):
         return dones
 
     def _compute_rewards(self):
-        self.rewards.update({tl.ID: tl.calculate_reward(self.lanes_count) for tl in self.intersections if tl.time_to_act})
-        return {ts: self.rewards[ts] for ts in self.rewards.keys() if self._agents_dict[ts].time_to_act}
+        return {}
+        # self.rewards.update({tl.ID: tl.calculate_reward(self.lanes_count) for tl in self.intersections.values() if tl.time_to_act})
+        # return {ts: 0 for ts in self.rewards.keys()}
 
     def observe(self, agent):
         """
@@ -203,6 +212,10 @@ class Environment(gym.Env):
             seed = random.randint(1, 1e6)
         self.eng.reset(seed=False)
         self.eng.set_random_seed(seed)
+
+        self._warmup()
+        self.eng.set_save_replay(True)
+
         self.time = 0
         for agent in self.agents:
             agent.reset()

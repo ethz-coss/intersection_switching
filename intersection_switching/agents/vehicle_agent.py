@@ -16,6 +16,10 @@ class VehicleAgent:
         self.ID = ID
         self.env = env
 
+        self.distance = 0
+        self.total_rewards = []
+        self.start_time = 0
+
         n_actions = 2 # (binary choice?)
         n_states = 10 # TODO: edit
         self.observation_space = spaces.Box(low=np.zeros(n_states), 
