@@ -89,13 +89,11 @@ class Logger:
         delays = []
         travel_times = []
         for veh_id, veh_data in environ.vehicles.items():
-            if 'end_time' in veh_data.keys():
-                tt = veh_data['end_time'] - veh_data['start_time']
-            else:
-                continue # ignore unfinished vehicles
-                # tt = environ.time - veh_data['start_time']
-            flow_id = veh_data['flow_id']
-            delay = (tt - flows[flow_id]['freeflow_time'])/flows[flow_id]['routelength']*1000 # secs/km
+
+            tt = environ.time - veh_data.start_time
+            dist = veh_data.distance
+            delay = (tt - dist/16.67)/dist # NOTE: maxspeed is hardcoded
+            delay *= 1000 # convert to secs/km
             delays.append(delay)
             travel_times.append(tt)
         self.delays.append(delays)
