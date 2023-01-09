@@ -115,8 +115,11 @@ class Movement:
         :param lanes_vehs: a dictionary with lane ids as keys and number of vehicles as values
         :returns: the pressure of the movement
         """
-        pressure = np.sum([lanes_count[x] / self.in_length for x in self.in_lanes])
-        pressure -= np.mean([lanes_count[x] / self.out_length for x in self.out_lanes])
+        pressure = 0
+        if self.in_lanes:
+            pressure += np.sum([lanes_count[x] / self.in_length for x in self.in_lanes])
+        if self.out_lanes:
+            pressure -= np.mean([lanes_count[x] / self.out_length for x in self.out_lanes])
 
         self.pressure = pressure
         return self.pressure
