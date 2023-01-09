@@ -43,7 +43,7 @@ class SwitchAgent(Agent):
 
     def switch(self, eng, lane_vehs, lanes_count):
         curr_phase = self.phase.ID
-        action = abs(curr_phase-2)+1 # index zero is clearing
+        action = abs(curr_phase-2)+1 # ID zero is clearing
         self.update_arr_dep_veh_num(lane_vehs, lanes_count)
         super().apply_action(eng, action, lane_vehs, lanes_count)
 

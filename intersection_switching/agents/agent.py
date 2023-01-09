@@ -172,7 +172,7 @@ class Agent:
         Resets the set containing the vehicle ids for each movement and the arr/dep vehicles numbers as well as the waiting times
         the set represents the vehicles waiting on incoming lanes of the movement
         """
-        self.phase = self.clearing_phase
+        self.phase = np.random.choice(list(self.phases.values())) 
         for move in self.movements.values():
             move.prev_vehs = set()
             move.arr_vehs_num = []
