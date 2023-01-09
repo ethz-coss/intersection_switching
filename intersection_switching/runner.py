@@ -4,7 +4,7 @@ import argparse
 
 from models.dqn import DQN
 from models.hybrid_agent import Hybrid
-from models.sac import SAC
+# from models.sac import SAC
 from environ import Environment
 from logger import Logger
 from importlib import import_module
@@ -150,18 +150,18 @@ def run_exp(environ, args, num_episodes, num_sim_steps, policies, policy_mapper,
                     # environ.eps = max(environ.eps-environ.eps_decay, environ.eps_end)
             obs = next_obs
 
-        if environ.agents_type in ['learning', 'hybrid', 'presslight']:
-            if environ.eng.get_average_travel_time() < best_time:
-                best_time = environ.eng.get_average_travel_time()
-                logger.save_models(policies, flag=False)
-                environ.best_epoch = i_episode
+        # if environ.agents_type in ['learning', 'hybrid', 'presslight']:
+        #     if environ.eng.get_average_travel_time() < best_time:
+        #         best_time = environ.eng.get_average_travel_time()
+        #         logger.save_models(policies, flag=False)
+        #         environ.best_epoch = i_episode
 
-            if environ.eng.get_finished_vehicle_count() > best_veh_count:
-                best_veh_count = environ.eng.get_finished_vehicle_count()
-                logger.save_models(policies, flag=True)
-                environ.best_epoch = i_episode
+        #     if environ.eng.get_finished_vehicle_count() > best_veh_count:
+        #         best_veh_count = environ.eng.get_finished_vehicle_count()
+        #         logger.save_models(policies, flag=True)
+        #         environ.best_epoch = i_episode
 
-        logger.log_measures(environ)
+        # logger.log_measures(environ)
         logger.log_delays(args.sim_config, environ)
         if environ.agents_type in ['learning', 'hybrid', 'presslight']:
             # if logger.reward > best_reward:
