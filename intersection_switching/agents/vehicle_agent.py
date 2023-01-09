@@ -1,7 +1,7 @@
 from engine.cityflow.intersection import Movement, Phase
 import numpy as np
 from gym import spaces
-
+import random
 
 class VehicleAgent:
     """
@@ -16,6 +16,7 @@ class VehicleAgent:
         self.ID = ID
         self.env = env
 
+        self.stopped = 0
         self.distance = 0
         self.total_rewards = []
         self.start_time = 0
@@ -27,6 +28,9 @@ class VehicleAgent:
                                             dtype=float)
 
         self.action_space = spaces.Discrete(n_actions)
+
+    def get_vote(self):
+        return random.randint(0,1), 1
 
     def set_objective(self, eng, phase):
         """
@@ -46,7 +50,10 @@ class VehicleAgent:
         Resets the set containing the vehicle ids for each movement and the arr/dep vehicles numbers as well as the waiting times
         the set represents the vehicles waiting on incoming lanes of the movement
         """
-        pass
+        self.stopped = 0
+        self.distance = 0
+        self.total_rewards = []
+        self.start_time = 0
 
     def observe(self, eng, time, lanes_count, lane_vehs, veh_distance):
         raise NotImplementedError

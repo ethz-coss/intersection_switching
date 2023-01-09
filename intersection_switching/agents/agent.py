@@ -215,13 +215,13 @@ class Agent:
     def observe(self, eng, time, lanes_count, lane_vehs, veh_distance):
         raise NotImplementedError
 
-    def apply_action(self, eng, action, time, lane_vehs, lanes_count):
+    def apply_action(self, eng, action, lane_vehs, lanes_count):
         """
         represents a single step of the simulation for the analytical agent
         :param time: the current timestep
         :param done: flag indicating weather this has been the last step of the episode, used for learning, here for interchangability of the two steps
         """
-
+        time = self.env.time
         if self.action_type == "act":
             if type(action) is tuple:
                 action, self.green_time = action

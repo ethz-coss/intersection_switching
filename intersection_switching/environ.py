@@ -148,13 +148,14 @@ class Environment(gym.Env):
                 lane.update_speeds(self, self.lane_vehs[lane_id], veh_speeds)
 
             for veh_id, speed in veh_speeds.items():
+                veh = self.vehicles[veh_id]
                 if speed <= 0.1:
-                    veh_stop = self.stopped.setdefault(veh_id, 0) + 1
-                    if veh_stop == 1:
+                    veh.stopped += 1
+                    if veh.stopped == 1:
                         stops += 1  # first stop
-                elif speed > 0.1 and veh_id in self.stopped.keys():
-                    self.waiting_times.append(self.stopped[veh_id])
-                    self.stopped.pop(veh_id)
+                elif speed > 0.1 and veh.stopped:
+                    self.waiting_times.append(veh.stopped)
+                    veh.stopped = 0
 
             self.speeds.append(np.mean(list(veh_speeds.values())))
             self.stops.append(stops)
@@ -173,9 +174,16 @@ class Environment(gym.Env):
         #     if agent.time_to_act:
         #         agent.apply_action(self.eng, action, self.time,
         #                            self.lane_vehs, self.lanes_count)
+
         for intersection in self.intersections.values():
-            intersection.switch(self.eng, self.time,
+            lane_vehicles = self.eng.get_lane_vehicles()
+            votes = []
+            for lane_id in intersection.approach_lanes:
+                for veh_id in lane_vehicles[lane_id]:
+                    votes.append(self.vehicles[veh_id].get_vote())
+            intersection.apply_action(self.eng, votes,
                                    self.lane_vehs, self.lanes_count)
+            # intersection.switch(self.eng, self.lane_vehs, self.lanes_count)
         pass
 
     def _get_obs(self):
