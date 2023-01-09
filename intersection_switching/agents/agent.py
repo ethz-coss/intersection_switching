@@ -23,7 +23,6 @@ class Agent:
         self.total_rewards = []
         self.reward_count = 0
 
-        self.phase = None
 
         # self.next_act_time = env.action_freq
         self.next_act_time = 0
@@ -112,7 +111,6 @@ class Agent:
                 self.clearing_phase = Phase(empty_phases[0], [])
                 self.phases.update({empty_phases[0]: self.clearing_phase})
 
-        self.phase = self.clearing_phase
         temp_moves = dict(self.movements)
         self.movements.clear()
         for move in temp_moves.values():
@@ -124,6 +122,7 @@ class Agent:
                 if phase.ID not in self.movements[move].phases:
                     self.movements[move].phases.append(phase.ID)
 
+        self.phase = np.random.choice(list(self.phases.values()))
 
     def set_phase(self, eng, phase):
         """
@@ -225,21 +224,20 @@ class Agent:
         if self.action_type == "act":
             if type(action) is tuple:
                 action, self.green_time = action
-                self.chosen_phase = self.phases[action]
             else:
-                self.chosen_phase = self.phases[action]
                 self.green_time = self.env.action_freq
 
             self.last_act_time = time
             if self.phase.ID != action:
+                self.chosen_phase = self.phases[action]
                 self.update_wait_time(
                     time, self.chosen_phase, self.phase, lanes_count)
                 self.set_phase(eng, self.clearing_phase)
                 self.next_act_time = time + self.clearing_time + self.green_time
                 self.action_type = "update"
-
-            else:
-                self.next_act_time = time + self.green_time
+                return
+            
+            self.next_act_time = time + self.green_time
 
     def update(self):
         if (self.action_type == 'update' and
