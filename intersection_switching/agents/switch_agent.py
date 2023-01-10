@@ -1,6 +1,7 @@
 import numpy as np
 import queue
 import operator
+from gym import spaces
 
 from agents.agent import Agent
 
@@ -27,6 +28,13 @@ class SwitchAgent(Agent):
             for movement_id in phase.movements:
                 self.approach_lanes += self.movements[movement_id].in_lanes
         self.init_phases_vectors()
+
+        n_actions = len(self.phases)
+        self.observation_space = spaces.Box(low=np.zeros(n_actions+6), 
+                                            high=np.array([1]*n_actions+[100]*6),
+                                            dtype=float)
+
+        self.action_space = spaces.Box()
 
     def init_phases_vectors(self):
         """
@@ -85,8 +93,7 @@ class SwitchAgent(Agent):
         action = abs(curr_phase-1) # ID zero is clearing
         super().apply_action(eng, action, lane_vehs, lanes_count)
 
-    def apply_action(self, eng, votes, lane_vehs, lanes_count):
-        will_switch = np.random.random()>0.5
+    def apply_action(self, eng, will_switch, lane_vehs, lanes_count):
         if will_switch:
             curr_phase = self.phase.ID
             action = abs(curr_phase-1) # ID zero is clearing
@@ -97,9 +104,9 @@ class SwitchAgent(Agent):
 
     def get_reward(self, type='speed'):
         if type=='speed':
-            return np.mean(self.env.speeds[self.env.speeds_idx:])
+            return np.mean(self.env.speeds[-self.env.speeds_idx:])
         if type=='stops':
-            return -np.mean(self.env.speeds[self.env.speeds_idx:])
+            return -np.mean(self.env.speeds[-self.env.speeds_idx:])
 
     def calculate_reward(self, lanes_count, type='speed'):
         reward = self.get_reward(type=type)

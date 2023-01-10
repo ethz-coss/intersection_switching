@@ -3,8 +3,6 @@ import random
 import argparse
 
 from models.dqn import DQN
-from models.hybrid_agent import Hybrid
-# from models.sac import SAC
 from environ import Environment
 from logger import Logger
 from importlib import import_module
@@ -114,26 +112,26 @@ def run_exp(environ, args, num_episodes, num_sim_steps, policy, logger, detailed
         while environ.time < num_sim_steps:
             # Dispatch the observations to the model to get the tuple of actions
             actions = environ.actions  # .copy()
+            actions = {id: np.random.random()>0.5 for id in environ.agent_ids}
 
             # Execute the actions
             next_obs, rewards, dones, info = environ.step(actions)
-
+            # print(next_obs, rewards)
 
             # Update the model with the transitions observed by each agent
-            # if environ.agents_type in ['learning'] and environ.time > 50: 
-            #     for agent_id in rewards.keys():
-            #         if rewards[agent_id]:
-            #             state = torch.FloatTensor(obs[agent_id], device=device)
-            #             reward = torch.tensor(
-            #                 [rewards[agent_id]], dtype=torch.float, device=device)
-            #             done = torch.tensor(
-            #                 [dones[agent_id]], dtype=torch.bool, device=device)
-            #             action = torch.tensor(
-            #                 [actions[agent_id]], device=device)
-            #             next_state = torch.FloatTensor(
-            #                 next_obs[agent_id], device=device)
-            #             policy.memory.add(
-            #                 state, action, reward, next_state, done)
+            if environ.agents_type in ['learning'] and environ.time > 50:
+                for agent_id in rewards.keys():
+                    state = torch.FloatTensor(obs[agent_id], device=device)
+                    reward = torch.tensor(
+                        [rewards[agent_id]], dtype=torch.float, device=device)
+                    done = torch.tensor(
+                        [dones[agent_id]], dtype=torch.bool, device=device)
+                    action = torch.tensor(
+                        [actions[agent_id]], device=device)
+                    next_state = torch.FloatTensor(
+                        next_obs[agent_id], device=device)
+                    policy.memory.add(
+                        state, action, reward, next_state, done)
 
             step = (step+1) % environ.update_freq
             if step == 0 and args.mode == 'train':
@@ -149,20 +147,20 @@ def run_exp(environ, args, num_episodes, num_sim_steps, policy, logger, detailed
         if environ.agents_type in ['learning']:
             if environ.eng.get_average_travel_time() < best_time:
                 best_time = environ.eng.get_average_travel_time()
-                logger.save_models(policy, flag=False)
+                logger.save_models([policy], flag=False)
                 environ.best_epoch = i_episode
 
             if environ.eng.get_finished_vehicle_count() > best_veh_count:
                 best_veh_count = environ.eng.get_finished_vehicle_count()
-                logger.save_models(policy, flag=True)
+                logger.save_models([policy], flag=True)
                 environ.best_epoch = i_episode
 
-        # logger.log_measures(environ)
+        logger.log_measures(environ)
         logger.log_delays(args.sim_config, environ)
         if environ.agents_type in ['learning']:
             # if logger.reward > best_reward:
             best_reward = logger.reward
-            logger.save_models(policies, flag=None)
+            logger.save_models([policy], flag=None)
 
         print_string = (f'Rew: {logger.reward:.4f}\t'
                         f'MeanTravelTime (sec): {environ.eng.get_average_travel_time():.2f}\t'
@@ -186,7 +184,7 @@ if __name__ == "__main__":
 
     act_space = environ.action_space
     obs_space = environ.observation_space
-
+    print(act_space.n, obs_space.shape)
     if args.agents_type in ['learning']:
         policy = DQN(obs_space, act_space, seed=SEED, load=args.load)
     else:
@@ -199,5 +197,5 @@ if __name__ == "__main__":
 
 
     detailed_log = args.mode == 'test'
-    run_exp(environ, args, num_episodes, num_sim_steps, policy, logger, detailed_log)
+    run_exp(environ, args, num_episodes, num_sim_steps, policies[0], logger, detailed_log)
 

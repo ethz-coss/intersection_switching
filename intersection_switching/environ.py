@@ -133,6 +133,8 @@ class Environment(gym.Env):
     def sub_steps(self):
         time_to_act = False
         while not time_to_act:
+            self.stops_idx = 0
+            self.speeds_idx = 0
             self.eng.next_step()
             self.time += 1
 
@@ -158,7 +160,6 @@ class Environment(gym.Env):
                 elif speed > 0.1 and veh.stopped:
                     self.waiting_times.append(veh.stopped)
                     veh.stopped = 0
-
             self.speeds.append(np.mean(list(self.veh_speeds.values())))
             self.stops.append(stops)
             self.stops_idx += 1
@@ -174,12 +175,12 @@ class Environment(gym.Env):
 
     def _apply_actions(self, actions):
         for intersection in self.intersections.values():
-            lane_vehicles = self.eng.get_lane_vehicles()
-            votes = []
-            for lane_id in intersection.approach_lanes:
-                for veh_id in lane_vehicles[lane_id]:
-                    votes.append(self.vehicles[veh_id].get_vote())
-            intersection.apply_action(self.eng, votes,
+            # lane_vehicles = self.eng.get_lane_vehicles()
+            # votes = []
+            # for lane_id in intersection.approach_lanes:
+            #     for veh_id in lane_vehicles[lane_id]:
+            #         votes.append(self.vehicles[veh_id].get_vote())
+            intersection.apply_action(self.eng, actions[intersection.ID],
                                    self.lane_vehs, self.lanes_count)
 
     def _get_obs(self):
