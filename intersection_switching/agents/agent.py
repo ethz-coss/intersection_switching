@@ -111,7 +111,7 @@ class Agent:
                 self.clearing_phase = Phase(empty_phases[0], [])
                 self.phases.update({empty_phases[0]: self.clearing_phase})
 
-        self.phase = self.clearing_phase
+        self.phase = self.clearing_phase or self.phases[0] 
         temp_moves = dict(self.movements)
         self.movements.clear()
         for move in temp_moves.values():
@@ -172,7 +172,7 @@ class Agent:
         Resets the set containing the vehicle ids for each movement and the arr/dep vehicles numbers as well as the waiting times
         the set represents the vehicles waiting on incoming lanes of the movement
         """
-        self.phase = self.clearing_phase
+        self.phase = self.clearing_phase or self.phases[0]
         for move in self.movements.values():
             move.prev_vehs = set()
             move.arr_vehs_num = []
@@ -224,20 +224,24 @@ class Agent:
         if self.action_type == "act":
             if type(action) is tuple:
                 action, self.green_time = action
+                self.chosen_phase = self.phases[action]
             else:
+                self.chosen_phase = self.phases[action]
                 self.green_time = self.env.action_freq
 
             self.last_act_time = time
             if self.phase.ID != action:
-                self.chosen_phase = self.phases[action]
                 self.update_wait_time(
                     time, self.chosen_phase, self.phase, lanes_count)
-                self.set_phase(eng, self.clearing_phase)
-                self.next_act_time = time + self.clearing_time + self.green_time
-                self.action_type = "update"
-                return
-            
-            self.next_act_time = time + self.green_time
+                if self.clearing_phase is not None:
+                    self.set_phase(eng, self.clearing_phase)
+                    self.next_act_time = time + self.clearing_time + self.green_time
+                    self.action_type = "update"
+                else:
+                    self.set_phase(eng, self.chosen_phase)
+                    self.next_act_time = time + self.green_time
+            else:
+                self.next_act_time = time + self.green_time
 
     def update(self):
         if (self.action_type == 'update' and

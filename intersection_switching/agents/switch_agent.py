@@ -17,15 +17,54 @@ class SwitchAgent(Agent):
         """
         super().__init__(env, ID)
 
+        self.clearing_phase = None
+        self.clearing_time = 0
+
         self.action_queue = queue.Queue()
         self.agents_type = 'switch'
         self.approach_lanes = []
         for phase in self.phases.values():
             for movement_id in phase.movements:
                 self.approach_lanes += self.movements[movement_id].in_lanes
+        self.init_phases_vectors()
+
+    def init_phases_vectors(self):
+        """
+        initialises vector representation of the phases
+        :param eng: the cityflow simulation engine
+        """
+        idx = 1
+        vec = np.zeros(len(self.phases))
+        # self.clearing_phase.vector = vec.tolist()
+        for phase in self.phases.values():
+            vec = np.zeros(len(self.phases))
+            if idx != 0:
+                vec[idx-1] = 1
+            phase.vector = vec.tolist()
+            idx += 1
 
     def observe(self, veh_distance):
-        return None
+        observations = self.phase.vector + self.get_vehicle_approach_states()
+        return np.array(observations)
+
+    def get_vehicle_approach_states(self):
+        ROADLENGTH = 300 # meters, hardcoded
+        VEHLENGTH = 5 # meters, hardcoded
+
+        lane_vehicles = self.env.lane_vehs
+        state_vec = []
+        for lane_id in self.approach_lanes:
+            speeds = []
+            waiting_times = []
+            for veh_id in lane_vehicles[lane_id]:
+                vehicle = self.env.vehicles[veh_id]
+                speeds.append(self.env.veh_speeds[veh_id])
+                waiting_times.append(vehicle.stopped)
+            density = len(lane_vehicles[lane_id]) * VEHLENGTH / ROADLENGTH
+            ave_speed = np.mean(speeds or 0)
+            ave_wait = np.mean(waiting_times or 0)
+            state_vec += [density, ave_speed, ave_wait]
+        return state_vec
 
     def aggregate_votes(self, votes, agg_func=None):
         """
@@ -44,12 +83,14 @@ class SwitchAgent(Agent):
     def switch(self, eng, lane_vehs, lanes_count):
         curr_phase = self.phase.ID
         action = abs(curr_phase-1) # ID zero is clearing
-        self.update_arr_dep_veh_num(lane_vehs, lanes_count)
         super().apply_action(eng, action, lane_vehs, lanes_count)
 
     def apply_action(self, eng, votes, lane_vehs, lanes_count):
-        will_switch = self.aggregate_votes(votes)
+        will_switch = np.random.random()>0.5
         if will_switch:
-            self.switch(eng, lane_vehs, lanes_count)
+            curr_phase = self.phase.ID
+            action = abs(curr_phase-1) # ID zero is clearing
         else:
-            super().apply_action(eng, self.phase.ID, lane_vehs, lanes_count)
+            action = self.phase.ID
+        self.update_arr_dep_veh_num(lane_vehs, lanes_count)
+        super().apply_action(eng, action, lane_vehs, lanes_count)

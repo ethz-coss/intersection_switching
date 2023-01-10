@@ -47,6 +47,7 @@ class Environment(gym.Env):
         self.time = 0
         random.seed(2)
 
+        self.veh_speeds = self.eng.get_vehicle_speed()
         self.lane_vehs = self.eng.get_lane_vehicles()
         self.lanes_count = self.eng.get_lane_vehicle_count()
 
@@ -134,19 +135,19 @@ class Environment(gym.Env):
             self.time += 1
 
             stops = 0
-            veh_speeds = self.eng.get_vehicle_speed()
+            self.veh_speeds = self.eng.get_vehicle_speed()
             self.lane_vehs = self.eng.get_lane_vehicles()
             self.lanes_count = self.eng.get_lane_vehicle_count()
 
             # required to track distance of periodic trips
-            for veh_id, speed in veh_speeds.items():
+            for veh_id, speed in self.veh_speeds.items():
                 self.vehicles[veh_id].distance += speed
 
             for lane_id, lane in self.lanes.items():
                 lane.update_flow_data(self.eng, self.lane_vehs)
-                lane.update_speeds(self, self.lane_vehs[lane_id], veh_speeds)
+                lane.update_speeds(self, self.lane_vehs[lane_id], self.veh_speeds)
 
-            for veh_id, speed in veh_speeds.items():
+            for veh_id, speed in self.veh_speeds.items():
                 veh = self.vehicles[veh_id]
                 if speed <= 0.1:
                     veh.stopped += 1
@@ -156,7 +157,7 @@ class Environment(gym.Env):
                     self.waiting_times.append(veh.stopped)
                     veh.stopped = 0
 
-            self.speeds.append(np.mean(list(veh_speeds.values())))
+            self.speeds.append(np.mean(list(self.veh_speeds.values())))
             self.stops.append(stops)
 
             if self.time % self.update_freq == 0:  # TODO: move outside to training
@@ -225,6 +226,7 @@ class Environment(gym.Env):
             lane.arr_vehs_num = []
             lane.prev_vehs = set()
 
+        self.veh_speeds = self.eng.get_vehicle_speed()
         self.lane_vehs = self.eng.get_lane_vehicles()
         self.lanes_count = self.eng.get_lane_vehicle_count()
         self.waiting_times = []
