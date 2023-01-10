@@ -91,6 +91,8 @@ class Environment(gym.Env):
         # metrics
         self.speeds = []
         self.stops = []
+        self.stops_idx = 0 # start measuring reward from this index
+        self.speeds_idx = 0 # start measuring reward from this index
         self.waiting_times = []
         self.stopped = {}
 
@@ -159,6 +161,8 @@ class Environment(gym.Env):
 
             self.speeds.append(np.mean(list(self.veh_speeds.values())))
             self.stops.append(stops)
+            self.stops_idx += 1
+            self.speeds_idx += 1
 
             if self.time % self.update_freq == 0:  # TODO: move outside to training
                 self.eps = max(self.eps-self.eps_decay, self.eps_end)
@@ -181,9 +185,8 @@ class Environment(gym.Env):
     def _get_obs(self):
         vehs_distance = self.eng.get_vehicle_distance()
 
-        self.observations.update({tl.ID: tl.observe(
-            vehs_distance) for tl in self.intersections.values() if tl.time_to_act})
-        return self.observations.copy()
+        self.observations = {tl.ID: tl.observe(vehs_distance) for tl in self.intersections.values()}
+        return self.observations
 
     def _compute_dones(self):
         dones = {ts_id: False for ts_id in self.intersection_ids}
@@ -191,9 +194,8 @@ class Environment(gym.Env):
         return dones
 
     def _compute_rewards(self):
-        return {}
-        # self.rewards.update({tl.ID: tl.calculate_reward(self.lanes_count) for tl in self.intersections.values() if tl.time_to_act})
-        # return {ts: 0 for ts in self.rewards.keys()}
+        self.rewards = {tl.ID: tl.calculate_reward(self.lanes_count) for tl in self.intersections.values()}
+        return self.rewards
 
     def observe(self, agent):
         """

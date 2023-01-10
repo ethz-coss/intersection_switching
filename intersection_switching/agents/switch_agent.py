@@ -94,3 +94,15 @@ class SwitchAgent(Agent):
             action = self.phase.ID
         self.update_arr_dep_veh_num(lane_vehs, lanes_count)
         super().apply_action(eng, action, lane_vehs, lanes_count)
+
+    def get_reward(self, type='speed'):
+        if type=='speed':
+            return np.mean(self.env.speeds[self.env.speeds_idx:])
+        if type=='stops':
+            return -np.mean(self.env.speeds[self.env.speeds_idx:])
+
+    def calculate_reward(self, lanes_count, type='speed'):
+        reward = self.get_reward(type=type)
+        self.total_rewards += [reward]
+        self.reward_count += 1
+        return reward
