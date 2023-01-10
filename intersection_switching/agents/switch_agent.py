@@ -18,7 +18,7 @@ class SwitchAgent(Agent):
         super().__init__(env, ID)
 
         self.action_queue = queue.Queue()
-        self.agents_type = 'analytical'
+        self.agents_type = 'switch'
         self.approach_lanes = []
         for phase in self.phases.values():
             for movement_id in phase.movements:
@@ -43,7 +43,7 @@ class SwitchAgent(Agent):
 
     def switch(self, eng, lane_vehs, lanes_count):
         curr_phase = self.phase.ID
-        action = abs(curr_phase-2)+1 # ID zero is clearing
+        action = abs(curr_phase-1) # ID zero is clearing
         self.update_arr_dep_veh_num(lane_vehs, lanes_count)
         super().apply_action(eng, action, lane_vehs, lanes_count)
 
