@@ -62,9 +62,6 @@ class Environment(gym.Env):
                                                         out_roads=self.eng.get_intersection_out_roads(intersection_id),
                                                         lr=args.lr, batch_size=args.batch_size)
 
-        self.vehicles = {}
-        for veh_id in self.eng.get_vehicles():
-            self.vehicles[veh_id] = VehicleAgent(self, veh_id)
 
         self.agents = list(self.vehicles.values())
         self.agent_ids = list(self.vehicles.keys())
@@ -101,6 +98,10 @@ class Environment(gym.Env):
     def _warmup(self):
         for _ in range(50):
             self.eng.next_step()
+            
+        self.vehicles = {}
+        for veh_id in self.eng.get_vehicles():
+            self.vehicles[veh_id] = VehicleAgent(self, veh_id)
 
     @property
     def observation_space(self):
