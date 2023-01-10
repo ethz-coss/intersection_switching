@@ -97,7 +97,7 @@ class Environment(gym.Env):
         self.stopped = {}
 
     def _warmup(self):
-        for _ in range(50):
+        for _ in range(80):
             self.eng.next_step()
             
         self.vehicles = {}

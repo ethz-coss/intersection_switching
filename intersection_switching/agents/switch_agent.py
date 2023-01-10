@@ -34,7 +34,7 @@ class SwitchAgent(Agent):
                                             high=np.array([1]*n_actions+[100]*6),
                                             dtype=float)
 
-        self.action_space = spaces.Box()
+        self.action_space = spaces.Discrete(n_actions)
 
     def init_phases_vectors(self):
         """
@@ -93,12 +93,12 @@ class SwitchAgent(Agent):
         action = abs(curr_phase-1) # ID zero is clearing
         super().apply_action(eng, action, lane_vehs, lanes_count)
 
-    def apply_action(self, eng, will_switch, lane_vehs, lanes_count):
-        if will_switch:
-            curr_phase = self.phase.ID
-            action = abs(curr_phase-1) # ID zero is clearing
-        else:
-            action = self.phase.ID
+    def apply_action(self, eng, phase_id, lane_vehs, lanes_count):
+        # if will_switch:
+        #     curr_phase = self.phase.ID
+        #     action = abs(curr_phase-1) # ID zero is clearing
+        # else:
+        action = phase_id
         self.update_arr_dep_veh_num(lane_vehs, lanes_count)
         super().apply_action(eng, action, lane_vehs, lanes_count)
 

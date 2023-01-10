@@ -92,8 +92,8 @@ class Logger:
 
             tt = environ.time - veh_data.start_time
             dist = veh_data.distance
-            delay = (tt - dist/16.67)/dist # NOTE: maxspeed is hardcoded
-            delay *= 1000 # convert to secs/km
+            delay = (tt - dist/16.67)#/dist # NOTE: maxspeed is hardcoded
+            # delay *= 1000 # convert to secs/km
             delays.append(delay)
             travel_times.append(tt)
         self.delays.append(delays)

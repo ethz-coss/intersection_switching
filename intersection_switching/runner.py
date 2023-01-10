@@ -112,7 +112,18 @@ def run_exp(environ, args, num_episodes, num_sim_steps, policy, logger, detailed
         while environ.time < num_sim_steps:
             # Dispatch the observations to the model to get the tuple of actions
             actions = environ.actions  # .copy()
-            actions = {id: np.random.random()>0.5 for id in environ.agent_ids}
+            actions = {id: 1*(np.random.random()>0.5) for id in environ.agent_ids}
+
+
+            for agent_id, agent in environ._agents_dict.items():
+                act = None
+
+            if environ.agents_type in ['learning', 'hybrid', 'presslight']:
+                act = policy.act(torch.FloatTensor(
+                    obs[agent_id], device=device), epsilon=environ.eps, agent=agent)
+                # print('acte')
+            actions = {id: act for id in environ.agent_ids}
+
 
             # Execute the actions
             next_obs, rewards, dones, info = environ.step(actions)
@@ -163,11 +174,11 @@ def run_exp(environ, args, num_episodes, num_sim_steps, policy, logger, detailed
             logger.save_models([policy], flag=None)
 
         print_string = (f'Rew: {logger.reward:.4f}\t'
-                        f'MeanTravelTime (sec): {environ.eng.get_average_travel_time():.2f}\t'
+                        # f'MeanTravelTime (sec): {environ.eng.get_average_travel_time():.2f}\t'
                         # f'FinishedVehicles: {environ.eng.get_finished_vehicle_count():.0f}\t'
                         f'Vehicles: {len(environ.vehicles):.0f}\t'
                         )
-        if detailed_log:
+        if True:
             print_string += f'MeanDelay (sec/km): {np.mean(logger.delays[-1]):.2f}'
         print(print_string)
 
