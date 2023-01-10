@@ -85,7 +85,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def run_exp(environ, args, num_episodes, num_sim_steps, policies, policy_mapper, detailed_log=False):
+def run_exp(environ, args, num_episodes, num_sim_steps, policy, logger, detailed_log=False):
     step = 0
     best_time = 999999
     best_veh_count = 0
@@ -100,18 +100,17 @@ def run_exp(environ, args, num_episodes, num_sim_steps, policies, policy_mapper,
 
     log_phases = False
 
+    print(f'actions: {list(environ.intersections.values())[0].action_space.n}')
     for i_episode in range(num_episodes):
         logger.losses = []
         if i_episode == num_episodes-1 and args.replay:
             environ.eng.set_save_replay(open=True)
-            print(args.path + "../replay_file.txt")
-            environ.eng.set_replay_file(args.path + "../replay_file.txt")
+            environ.eng.set_replay_file("frontend/replay_file.txt")
 
         print("episode ", i_episode)
 
         obs = environ.reset()
 
-        print(f'actions: {list(environ.intersections.values())[0].action_space.n}')
         while environ.time < num_sim_steps:
             # Dispatch the observations to the model to get the tuple of actions
             actions = environ.actions  # .copy()
@@ -119,11 +118,9 @@ def run_exp(environ, args, num_episodes, num_sim_steps, policies, policy_mapper,
             # Execute the actions
             next_obs, rewards, dones, info = environ.step(actions)
 
-            # if detailed_log:
-            #     environ.detailed_log()
 
             # Update the model with the transitions observed by each agent
-            # if environ.agents_type in ['learning', 'hybrid', 'denflow', 'presslight'] and environ.time > 15: 
+            # if environ.agents_type in ['learning'] and environ.time > 50: 
             #     for agent_id in rewards.keys():
             #         if rewards[agent_id]:
             #             state = torch.FloatTensor(obs[agent_id], device=device)
@@ -135,35 +132,34 @@ def run_exp(environ, args, num_episodes, num_sim_steps, policies, policy_mapper,
             #                 [actions[agent_id]], device=device)
             #             next_state = torch.FloatTensor(
             #                 next_obs[agent_id], device=device)
-            #             policy_mapper(agent_id).memory.add(
+            #             policy.memory.add(
             #                 state, action, reward, next_state, done)
 
-            step = (step+1) % 1  # environ.update_freq
-            # if step == 0 and args.mode == 'train':
-            #     if environ.agents_type in ['learning', 'hybrid', 'denflow', 'presslight']:
-            #         tau = 1e-3
-            #         _loss = 0
-            #         for policy in policies:
-            #             _loss -= policy.optimize_model(
-            #                 gamma=args.gamma, tau=tau)
-            #         logger.losses.append(-_loss)
-                    # environ.eps = max(environ.eps-environ.eps_decay, environ.eps_end)
+            step = (step+1) % environ.update_freq
+            if step == 0 and args.mode == 'train':
+                if environ.agents_type in ['learning']:
+                    tau = 1e-3
+                    _loss = 0
+                    _loss -= policy.optimize_model(
+                        gamma=args.gamma, tau=tau)
+                    logger.losses.append(-_loss)
+                    environ.eps = max(environ.eps-environ.eps_decay, environ.eps_end)
             obs = next_obs
 
-        # if environ.agents_type in ['learning', 'hybrid', 'presslight']:
-        #     if environ.eng.get_average_travel_time() < best_time:
-        #         best_time = environ.eng.get_average_travel_time()
-        #         logger.save_models(policies, flag=False)
-        #         environ.best_epoch = i_episode
+        if environ.agents_type in ['learning']:
+            if environ.eng.get_average_travel_time() < best_time:
+                best_time = environ.eng.get_average_travel_time()
+                logger.save_models(policy, flag=False)
+                environ.best_epoch = i_episode
 
-        #     if environ.eng.get_finished_vehicle_count() > best_veh_count:
-        #         best_veh_count = environ.eng.get_finished_vehicle_count()
-        #         logger.save_models(policies, flag=True)
-        #         environ.best_epoch = i_episode
+            if environ.eng.get_finished_vehicle_count() > best_veh_count:
+                best_veh_count = environ.eng.get_finished_vehicle_count()
+                logger.save_models(policy, flag=True)
+                environ.best_epoch = i_episode
 
         # logger.log_measures(environ)
         logger.log_delays(args.sim_config, environ)
-        if environ.agents_type in ['learning', 'hybrid', 'presslight']:
+        if environ.agents_type in ['learning']:
             # if logger.reward > best_reward:
             best_reward = logger.reward
             logger.save_models(policies, flag=None)
@@ -186,29 +182,13 @@ if __name__ == "__main__":
     args = parse_args()
     logger = Logger(args)
 
-    if args.agents_type == 'denflow':
-        n_states = 2
-    else:
-        n_states = 57
-
-    # load needed agent modules
-    try:
-        import_path = f"agents.{args.agents_type}_agent.{args.agents_type.capitalize()}_Agent"
-        AgentClass = import_string(import_path)
-    except:
-        raise Exception(
-            f"The specified agent type: {args.agent_type} is incorrect, choose from: analytical/learning/demand/hybrid/fixed/random")
-
-    environ = Environment(args, AgentClass=AgentClass)
+    environ = Environment(args)
 
     act_space = environ.action_space
     obs_space = environ.observation_space
 
-    if args.agents_type in ['learning', 'hybrid', 'presslight']:
-        if args.agents_type == 'hybrid':
-            policy = Hybrid(obs_space, act_space, seed=SEED, load=args.load)
-        else:
-            policy = DQN(obs_space, act_space, seed=SEED, load=args.load)
+    if args.agents_type in ['learning']:
+        policy = DQN(obs_space, act_space, seed=SEED, load=args.load)
     else:
         print('not using a policy')
         policy = None
@@ -217,8 +197,7 @@ if __name__ == "__main__":
     num_episodes = args.num_episodes
     num_sim_steps = args.num_sim_steps
 
-    def policy_mapper(agent_id): return policy  # multi-agent shared policy
 
     detailed_log = args.mode == 'test'
-    run_exp(environ, args, num_episodes, num_sim_steps, policies, policy_mapper, detailed_log)
+    run_exp(environ, args, num_episodes, num_sim_steps, policy, logger, detailed_log)
 

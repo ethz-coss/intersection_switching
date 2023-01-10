@@ -21,7 +21,7 @@ class Environment(gym.Env):
 
     metadata = {"name": "cityflow"}
 
-    def __init__(self, args=None, ID=0, AgentClass=None):
+    def __init__(self, args=None, ID=0):
         """
         initialises the environment with the arguments parsed from the user input
         :param args: the arguments input by the user
@@ -63,9 +63,9 @@ class Environment(gym.Env):
                                                         lr=args.lr, batch_size=args.batch_size)
 
 
-        self.agents = list(self.vehicles.values())
-        self.agent_ids = list(self.vehicles.keys())
-        self._agents_dict = self.vehicles
+        self.agents = list(self.intersections.values())
+        self.agent_ids = list(self.intersections.keys())
+        self._agents_dict = self.intersections
 
         n_states = self.agents[0].observation_space.shape[0]
 
@@ -78,8 +78,6 @@ class Environment(gym.Env):
         self.dones = {a_id: False for a_id in self.agent_ids}
         self.dones['__all__'] = False
         self.infos =  {agent: False for agent in self.agent_ids}
-        if self.agents_type == 'cluster':
-            raise NotImplementedError 
 
         self.mfd_data = []
         self.agent_history = []
@@ -170,12 +168,6 @@ class Environment(gym.Env):
                     time_to_act = True
 
     def _apply_actions(self, actions):
-        # for agent_id, action in actions.items():
-        #     agent = self._agents_dict[agent_id]
-        #     if agent.time_to_act:
-        #         agent.apply_action(self.eng, action, self.time,
-        #                            self.lane_vehs, self.lanes_count)
-
         for intersection in self.intersections.values():
             lane_vehicles = self.eng.get_lane_vehicles()
             votes = []
@@ -184,8 +176,6 @@ class Environment(gym.Env):
                     votes.append(self.vehicles[veh_id].get_vote())
             intersection.apply_action(self.eng, votes,
                                    self.lane_vehs, self.lanes_count)
-            # intersection.switch(self.eng, self.lane_vehs, self.lanes_count)
-        pass
 
     def _get_obs(self):
         vehs_distance = self.eng.get_vehicle_distance()
@@ -272,19 +262,5 @@ class Environment(gym.Env):
 
         return mfd_detailed
 
-    def detailed_log(self):
-        current_vehs = set(self.eng.get_vehicles())
-        finished_vehs = self.prev_vehs - current_vehs
-        new_vehs = current_vehs - self.prev_vehs
 
-        for veh_id in finished_vehs:
-            veh_info = self.vehicles[veh_id]
-            veh_info['end_time'] = self.time
-
-        for veh_id in new_vehs:
-            veh_info = self.vehicles.setdefault(veh_id, {})
-            veh_info['flow_id'] = veh_id.rsplit('_', 1)[0]
-            veh_info['start_time'] = self.time
-
-        self.prev_vehs = current_vehs
 

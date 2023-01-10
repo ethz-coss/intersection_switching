@@ -111,6 +111,7 @@ class Agent:
                 self.clearing_phase = Phase(empty_phases[0], [])
                 self.phases.update({empty_phases[0]: self.clearing_phase})
 
+        self.phase = self.clearing_phase
         temp_moves = dict(self.movements)
         self.movements.clear()
         for move in temp_moves.values():
@@ -122,7 +123,6 @@ class Agent:
                 if phase.ID not in self.movements[move].phases:
                     self.movements[move].phases.append(phase.ID)
 
-        self.phase = np.random.choice(list(self.phases.values()))
 
     def set_phase(self, eng, phase):
         """
@@ -172,7 +172,7 @@ class Agent:
         Resets the set containing the vehicle ids for each movement and the arr/dep vehicles numbers as well as the waiting times
         the set represents the vehicles waiting on incoming lanes of the movement
         """
-        self.phase = np.random.choice(list(self.phases.values())) 
+        self.phase = self.clearing_phase
         for move in self.movements.values():
             move.prev_vehs = set()
             move.arr_vehs_num = []
