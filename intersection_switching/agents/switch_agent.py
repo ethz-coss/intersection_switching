@@ -32,7 +32,7 @@ class SwitchAgent(Agent):
         self.init_phases_vectors()
 
         n_actions = len(self.phases)
-        nstates = 6
+        nstates = 10
         self.observation_space = spaces.Box(low=np.zeros(n_actions+nstates), 
                                             high=np.array([1]*n_actions+[100]*nstates),
                                             dtype=float)
@@ -75,11 +75,11 @@ class SwitchAgent(Agent):
             ave_speed = np.mean(speeds or 0)
             ave_wait = np.mean(waiting_times or 0)
             # state_vec += [density]
-            # state_vec += [density, ave_speed, ave_wait]
+            state_vec += [ave_speed, ave_wait]
             
         density = self.get_in_lanes_veh_num(vehs_distance)
-        # return state_vec
-        return density
+        return state_vec + density
+        # return density
 
     def get_in_lanes_veh_num(self, vehs_distance):
         """
@@ -142,10 +142,20 @@ class SwitchAgent(Agent):
 
     def get_reward(self, type='speed'):
         if type=='speed':
-            return -np.sum(self.env.stops[0:self.env.time])
-            # return np.mean(self.env.speeds[-self.env.speeds_idx:])
+            return np.mean(self.env.speeds[-self.env.speeds_idx:])
+            # return -np.sum(self.env.stops[0:self.env.time])
         if type=='stops':
-            return -np.mean(self.env.speeds[-self.env.speeds_idx:])
+            return -np.sum(self.env.stops[-self.env.stops_idx:])
+        if type=='delay':
+            MAXSPEED = 100/6 # NOTE: maxspeed is hardcoded
+            delays = []
+            for veh_id, veh_data in self.env.vehicles.items():
+                tt = self.env.time - veh_data.start_time
+                dist = veh_data.distance
+                delay = (tt - dist/MAXSPEED)/dist if dist!= 0 else 0
+                delay *= 600 # convert to secs/600m
+                delays.append(delay)
+            return -np.mean(delays)
 
     def calculate_reward(self, lanes_count, type='speed'):
         reward = self.get_reward(type=type)

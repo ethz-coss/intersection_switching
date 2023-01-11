@@ -79,7 +79,8 @@ def parse_args():
                         help="id used for naming")
     parser.add_argument("--gamma", default=0.8, type=float,
                         help="gamma parameter for the DQN")
-
+    parser.add_argument("--reward_type", default='speed', type=float,
+                        help="reward function for the agent")
     return parser.parse_args()
 
 
@@ -155,6 +156,8 @@ def run_exp(environ, args, num_episodes, num_sim_steps, policy, logger, detailed
                     environ.eps = max(environ.eps-environ.eps_decay, environ.eps_end)
             obs = next_obs
 
+            environ.agent_history.append(act)
+
         if environ.agents_type in ['learning']:
             if environ.eng.get_average_travel_time() < best_time:
                 best_time = environ.eng.get_average_travel_time()
@@ -191,7 +194,7 @@ if __name__ == "__main__":
     args = parse_args()
     logger = Logger(args)
 
-    environ = Environment(args)
+    environ = Environment(args, args.reward_type)
 
     act_space = environ.action_space
     obs_space = environ.observation_space

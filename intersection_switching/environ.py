@@ -21,7 +21,7 @@ class Environment(gym.Env):
 
     metadata = {"name": "cityflow"}
 
-    def __init__(self, args=None, ID=0):
+    def __init__(self, args=None, reward_type='speed', ID=0):
         """
         initialises the environment with the arguments parsed from the user input
         :param args: the arguments input by the user
@@ -41,6 +41,7 @@ class Environment(gym.Env):
         self.eps_update = args.eps_update
 
         self.eps = self.eps_start
+        self.reward_type = reward_type
 
         self._warmup()
 
@@ -53,7 +54,7 @@ class Environment(gym.Env):
 
         self.agents_type = args.agents_type
 
-        self.action_freq = 10  # typical update freq for agents
+        self.action_freq = 5  # typical update freq for agents
 
         self.intersection_ids = ['intersection_0_0'] # single intersection only
         self.intersections = {}
@@ -132,9 +133,9 @@ class Environment(gym.Env):
 
     def sub_steps(self):
         time_to_act = False
+        self.stops_idx = 0
+        self.speeds_idx = 0
         while not time_to_act:
-            self.stops_idx = 0
-            self.speeds_idx = 0
             self.eng.next_step()
             self.time += 1
 
@@ -195,7 +196,7 @@ class Environment(gym.Env):
         return dones
 
     def _compute_rewards(self):
-        self.rewards = {tl.ID: tl.calculate_reward(self.lanes_count) for tl in self.intersections.values()}
+        self.rewards = {tl.ID: tl.calculate_reward(self.lanes_count, type=self.reward_type) for tl in self.intersections.values()}
         return self.rewards
 
     def observe(self, agent):
@@ -234,6 +235,7 @@ class Environment(gym.Env):
         self.lanes_count = self.eng.get_lane_vehicle_count()
         self.waiting_times = []
         self.stopped = {}
+        self.speeds = []
         self.stops = []
 
 
