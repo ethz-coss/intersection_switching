@@ -234,6 +234,7 @@ class Environment(gym.Env):
         self.lanes_count = self.eng.get_lane_vehicle_count()
         self.waiting_times = []
         self.stopped = {}
+        self.stops = []
 
 
         obs = self._get_obs()

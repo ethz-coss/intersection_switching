@@ -139,10 +139,9 @@ class SwitchAgent(Agent):
 
     def get_reward(self, type='speed'):
         if type=='speed':
-            return -np.sum(self.env.stops[0:self.env.time])
-            # return np.mean(self.env.speeds[-self.env.speeds_idx:])
+            return np.mean(self.env.speeds[-self.env.speeds_idx:])
         if type=='stops':
-            return -np.mean(self.env.speeds[-self.env.speeds_idx:])
+            return -np.sum(self.env.stops[0:self.env.time])
 
     def calculate_reward(self, lanes_count, type='speed'):
         reward = self.get_reward(type=type)
