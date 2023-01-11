@@ -161,10 +161,11 @@ class Environment(gym.Env):
                 elif speed > 0.1 and veh.stopped:
                     self.waiting_times.append(veh.stopped)
                     veh.stopped = 0
+                    self.speeds_idx += 1
+
             self.speeds.append(np.mean(list(self.veh_speeds.values())))
             self.stops.append(stops)
             self.stops_idx += 1
-            self.speeds_idx += 1
 
             if self.time % self.update_freq == 0:  # TODO: move outside to training
                 self.eps = max(self.eps-self.eps_decay, self.eps_end)

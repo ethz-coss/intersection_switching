@@ -79,7 +79,7 @@ def parse_args():
                         help="id used for naming")
     parser.add_argument("--gamma", default=0.8, type=float,
                         help="gamma parameter for the DQN")
-    parser.add_argument("--reward_type", default='speed', type=float,
+    parser.add_argument("--reward_type", default='speed', type=str,
                         help="reward function for the agent")
     return parser.parse_args()
 
