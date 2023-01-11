@@ -104,7 +104,7 @@ def run_exp(environ, args, num_episodes, num_sim_steps, policy, logger, detailed
         logger.losses = []
         if i_episode == num_episodes-1 and args.replay:
             environ.eng.set_save_replay(open=True)
-            environ.eng.set_replay_file(f"../{logger.log_path}/replay_file.txt")
+            environ.eng.set_replay_file(f"../{logger.log_path}_{args.reward_type}/replay_file.txt")
 
         print("episode ", i_episode)
 
@@ -180,11 +180,12 @@ def run_exp(environ, args, num_episodes, num_sim_steps, policy, logger, detailed
                         # f'MeanTravelTime (sec): {environ.eng.get_average_travel_time():.2f}\t'
                         # f'FinishedVehicles: {environ.eng.get_finished_vehicle_count():.0f}\t'
                         f'Vehicles: {len(environ.vehicles):.0f}\t'
-                        f'MeanSpeed (sec): {np.mean(environ.speeds):.2f}\t'
-                        f'MeanStops (sec): {np.mean(environ.stops):.2f}\t'
+                        f'Speed (m/s): {np.mean(environ.speeds):.2f}\t'
+                        f'Stops (total): {np.sum(environ.stops):.2f}\t'
+                        f'WaitTimes (sec): {np.mean(environ.waiting_times):.2f}\t'
                         )
         if True:
-            print_string += f'MeanDelay (sec/km): {np.mean(logger.delays[-1]):.2f}'
+            print_string += f'Delay (sec/km): {np.mean(logger.delays[-1]):.2f}'
         print(print_string)
 
     # logger.save_log_file(environ)
