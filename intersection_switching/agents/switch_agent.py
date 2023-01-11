@@ -32,8 +32,9 @@ class SwitchAgent(Agent):
         self.init_phases_vectors()
 
         n_actions = len(self.phases)
-        self.observation_space = spaces.Box(low=np.zeros(n_actions+2), 
-                                            high=np.array([1]*n_actions+[100]*2),
+        nstates = 6
+        self.observation_space = spaces.Box(low=np.zeros(n_actions+nstates), 
+                                            high=np.array([1]*n_actions+[100]*nstates),
                                             dtype=float)
 
         self.action_space = spaces.Discrete(n_actions)
@@ -71,12 +72,14 @@ class SwitchAgent(Agent):
                 speeds.append(self.env.veh_speeds[veh_id])
                 waiting_times.append(vehicle.stopped)
             density = len(lane_vehicles[lane_id]) * VEHLENGTH / ROADLENGTH
-            # density = self.get_in_lanes_veh_num(vehs_distance)
             ave_speed = np.mean(speeds or 0)
             ave_wait = np.mean(waiting_times or 0)
-            state_vec += [density]
+            # state_vec += [density]
             # state_vec += [density, ave_speed, ave_wait]
-        return state_vec
+            
+        density = self.get_in_lanes_veh_num(vehs_distance)
+        # return state_vec
+        return density
 
     def get_in_lanes_veh_num(self, vehs_distance):
         """
