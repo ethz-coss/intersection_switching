@@ -73,7 +73,10 @@ class DQN:
                 action_probs = self.net_local(state)
                 # Take best action
             self.net_local.train()
+            if kwargs.get('as_probs'):
+                return action_probs
             action = action_probs.max(1)[1].item()
+
         return action
 
     def optimize_model(self, gamma=GAMMA, tau=TAU, criterion=None):

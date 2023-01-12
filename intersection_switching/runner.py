@@ -84,7 +84,8 @@ def parse_args():
     return parser.parse_args()
 
 
-def run_exp(environ, args, num_episodes, num_sim_steps, policy, logger, detailed_log=False):
+def run_exp(environ, args, num_episodes, num_sim_steps, logger,
+            policy, policy_map=None, detailed_log=False):
     step = 0
     best_time = 999999
     best_veh_count = 0
@@ -104,7 +105,7 @@ def run_exp(environ, args, num_episodes, num_sim_steps, policy, logger, detailed
         logger.losses = []
         if i_episode == num_episodes-1 and args.replay:
             environ.eng.set_save_replay(open=True)
-            environ.eng.set_replay_file(f"../{logger.log_path}_{args.reward_type}/replay_file.txt")
+            environ.eng.set_replay_file(f"../{logger.log_path}/replay_file.txt")
 
         print("episode ", i_episode)
 
@@ -114,12 +115,35 @@ def run_exp(environ, args, num_episodes, num_sim_steps, policy, logger, detailed
             # Dispatch the observations to the model to get the tuple of actions
             # actions = {id: 1*(np.random.random()>0.5) for id in environ.agent_ids} # random policy
 
-            if environ.agents_type in ['learning']:
+            # if environ.agents_type in ['learning']:
+            #     actions = {}
+            #     for agent_id in environ.agent_ids:
+            #         act = policy.act(torch.FloatTensor(
+            #             obs[agent_id], device=device), epsilon=environ.eps)
+            #         actions[agent_id] = act
+
+            if args.mode=='vote':
                 actions = {}
                 for agent_id in environ.agent_ids:
-                    act = policy.act(torch.FloatTensor(
-                        obs[agent_id], device=device), epsilon=environ.eps)
-                actions[agent_id] = act
+                    actprob = np.zeros(2)
+                    weights = [1,0]
+                    raw_net = []
+                    for i, pref in zip(weights,['speed', 'wait']):
+                        _act = policy_map[pref].act(torch.FloatTensor(
+                            obs[agent_id], device=device), 
+                            epsilon=environ.eps,
+                            as_probs=True)
+                        _act = _act.numpy().squeeze()
+                        raw_net.append(np.argmax(_act))
+                        norm = _act.sum()
+                        normed_act = _act/norm
+                        if norm<0:
+                            normed_act = 1-normed_act
+                        actprob += i*normed_act
+                        # print(pref, _act, normed_act)
+                    act = np.argmax(actprob/sum(weights))
+                    actions[agent_id] = act
+                    print(np.array(raw_net)==act)
 
 
             # Execute the actions
@@ -196,6 +220,7 @@ if __name__ == "__main__":
     act_space = environ.action_space
     obs_space = environ.observation_space
     print(act_space.n, obs_space.shape)
+
     if args.agents_type in ['learning']:
         policy = DQN(obs_space, act_space, seed=SEED, load=args.load)
     else:
@@ -203,10 +228,20 @@ if __name__ == "__main__":
         policy = None
     policies = [policy]
 
+    saved_preferences = ['speed', 'wait']
+    if args.mode=='vote':
+        policy_map = {}
+        for pref in saved_preferences:
+            load_path = f'../saved_models/reward_{pref}/reward_target_net.pt'
+            policy_map[pref] = DQN(obs_space, act_space, 
+                                   seed=SEED, load=load_path)
+    else:
+        policy_map=None
+
     num_episodes = args.num_episodes
     num_sim_steps = args.num_sim_steps
 
 
     detailed_log = args.mode == 'test'
-    run_exp(environ, args, num_episodes, num_sim_steps, policies[0], logger, detailed_log)
+    run_exp(environ, args, num_episodes, num_sim_steps, logger, policies[0], policy_map, detailed_log)
 
