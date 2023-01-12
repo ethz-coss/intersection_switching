@@ -62,7 +62,7 @@ def parse_args():
     parser.add_argument("--eps_update", default=1799,
                         type=float, help="how frequently epsilon is decayed")
     parser.add_argument("--load", default=None, type=str,
-                        help="path to the model to be loaed")
+                        help="path to the model to be loaded")
     parser.add_argument("--mode", default='train', type=str,
                         help="mode of the run train/test")
     parser.add_argument("--replay", default=False,
@@ -112,18 +112,14 @@ def run_exp(environ, args, num_episodes, num_sim_steps, policy, logger, detailed
 
         while environ.time < num_sim_steps:
             # Dispatch the observations to the model to get the tuple of actions
-            actions = environ.actions  # .copy()
-            actions = {id: 1*(np.random.random()>0.5) for id in environ.agent_ids}
+            # actions = {id: 1*(np.random.random()>0.5) for id in environ.agent_ids} # random policy
 
-
-            for agent_id, agent in environ._agents_dict.items():
-                act = None
-
-            if environ.agents_type in ['learning', 'hybrid', 'presslight']:
-                act = policy.act(torch.FloatTensor(
-                    obs[agent_id], device=device), epsilon=environ.eps, agent=agent)
-                # print('acte')
-            actions = {id: act for id in environ.agent_ids}
+            if environ.agents_type in ['learning']:
+                actions = {}
+                for agent_id in environ.agent_ids:
+                    act = policy.act(torch.FloatTensor(
+                        obs[agent_id], device=device), epsilon=environ.eps)
+                actions[agent_id] = act
 
 
             # Execute the actions
@@ -131,23 +127,24 @@ def run_exp(environ, args, num_episodes, num_sim_steps, policy, logger, detailed
             # print(next_obs, rewards)
 
             # Update the model with the transitions observed by each agent
-            if environ.agents_type in ['learning'] and environ.time > 50:
-                for agent_id in rewards.keys():
-                    state = torch.FloatTensor(obs[agent_id], device=device)
-                    reward = torch.tensor(
-                        [rewards[agent_id]], dtype=torch.float, device=device)
-                    done = torch.tensor(
-                        [dones[agent_id]], dtype=torch.bool, device=device)
-                    action = torch.tensor(
-                        [actions[agent_id]], device=device)
-                    next_state = torch.FloatTensor(
-                        next_obs[agent_id], device=device)
-                    policy.memory.add(
-                        state, action, reward, next_state, done)
+            
+            if args.mode=='train' and environ.agents_type in ['learning']:
+                step = (step+1) % environ.update_freq
+                if environ.time > 50:
+                    for agent_id in rewards.keys():
+                        state = torch.FloatTensor(obs[agent_id], device=device)
+                        reward = torch.tensor(
+                            [rewards[agent_id]], dtype=torch.float, device=device)
+                        done = torch.tensor(
+                            [dones[agent_id]], dtype=torch.bool, device=device)
+                        action = torch.tensor(
+                            [actions[agent_id]], device=device)
+                        next_state = torch.FloatTensor(
+                            next_obs[agent_id], device=device)
+                        policy.memory.add(
+                            state, action, reward, next_state, done)
 
-            step = (step+1) % environ.update_freq
-            if step == 0 and args.mode == 'train':
-                if environ.agents_type in ['learning']:
+                if step == 0:
                     tau = 1e-3
                     _loss = 0
                     _loss -= policy.optimize_model(
@@ -169,16 +166,13 @@ def run_exp(environ, args, num_episodes, num_sim_steps, policy, logger, detailed
                 logger.save_models([policy], flag=True)
                 environ.best_epoch = i_episode
 
-        logger.log_measures(environ)
-        logger.log_delays(args.sim_config, environ)
-        if environ.agents_type in ['learning']:
             # if logger.reward > best_reward:
             best_reward = logger.reward
             logger.save_models([policy], flag=None)
+        logger.log_measures(environ)
+        logger.log_delays(args.sim_config, environ)
 
         print_string = (f'Rew: {logger.reward:.4f}\t'
-                        # f'MeanTravelTime (sec): {environ.eng.get_average_travel_time():.2f}\t'
-                        # f'FinishedVehicles: {environ.eng.get_finished_vehicle_count():.0f}\t'
                         f'Vehicles: {len(environ.vehicles):.0f}\t'
                         f'Speed (m/s): {np.mean(environ.speeds):.2f}\t'
                         f'Stops (total): {np.sum(environ.stops):.2f}\t'
