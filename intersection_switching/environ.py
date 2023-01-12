@@ -4,6 +4,7 @@ import numpy as np
 import random
 import os
 import functools
+from collections import Counter
 
 from engine.cityflow.intersection import Lane
 from gym import utils
@@ -270,5 +271,15 @@ class Environment(gym.Env):
 
         return mfd_detailed
 
-
-
+    def vote_drivers(self):
+        votes = []
+        for intersection in self.intersections.values():
+            lane_vehicles = self.eng.get_lane_vehicles()
+            for lane_id in intersection.approach_lanes:
+                for veh_id in lane_vehicles[lane_id]:
+                    votes.append(self.vehicles[veh_id].get_vote())
+        return Counter(votes)
+        
+    def assign_driver_preferences(self, preferences_dict):
+        for veh_id, preference in preferences_dict.items():
+            self.vehicles[veh_id].preference = preference
