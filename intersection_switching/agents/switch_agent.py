@@ -141,12 +141,13 @@ class SwitchAgent(Agent):
         super().apply_action(eng, action, lane_vehs, lanes_count)
 
     def get_reward(self, type='speed'):
+        MAXSPEED = 100/6 # NOTE: maxspeed is hardcoded
+        WAIT_THRESHOLD = 120
         if type=='speed':
-            return np.mean(self.env.speeds[-self.env.stops_idx:])
+            return np.mean(self.env.speeds[-self.env.stops_idx:])/MAXSPEED
         if type=='stops':
             return -np.sum(self.env.stops[-self.env.stops_idx:])
         if type=='delay':
-            MAXSPEED = 100/6 # NOTE: maxspeed is hardcoded
             delays = []
             for veh_id, veh_data in self.env.vehicles.items():
                 tt = self.env.time - veh_data.start_time
@@ -160,7 +161,7 @@ class SwitchAgent(Agent):
             for veh_id in self.env.vehicles.keys():
                 vehicle = self.env.vehicles[veh_id]
                 waiting_times.append(vehicle.stopped)
-            return -np.mean(waiting_times)
+            return -1*np.clip(np.mean(waiting_times), 0, WAIT_THRESHOLD)
 
     def calculate_reward(self, lanes_count, type='speed'):
         reward = self.get_reward(type=type)
