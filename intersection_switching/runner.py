@@ -112,19 +112,22 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
         obs = environ.reset()
 
         pref_types = ['speed', 'stops', 'wait']
-        preferences_dict = {id: np.random.choice(pref_types) for id in environ.vehicles.keys()}
+        weights = [0.2,0.4,0.4]
+        # preferences_dict = {id: np.random.choice(pref_types) for id in environ.vehicles.keys()}
+        preferences_dict = {id: np.random.choice(pref_types, p=weights) for id in environ.vehicles.keys()}
+
         # preferences_dict = {id: 'speed' for id in environ.vehicles.keys()}
         environ.assign_driver_preferences(preferences_dict)
         while environ.time < num_sim_steps:
             # Dispatch the observations to the model to get the tuple of actions
             # actions = {id: 1*(np.random.random()>0.5) for id in environ.agent_ids} # random policy
 
-            # if environ.agents_type in ['learning']:
-            #     actions = {}
-            #     for agent_id in environ.agent_ids:
-            #         act = policy.act(torch.FloatTensor(
-            #             obs[agent_id], device=device), epsilon=environ.eps)
-            #         actions[agent_id] = act
+            if args.mode == 'train' and environ.agents_type in ['learning']:
+                actions = {}
+                for agent_id in environ.agent_ids:
+                    act = policy.act(torch.FloatTensor(
+                        obs[agent_id], device=device), epsilon=environ.eps)
+                    actions[agent_id] = act
 
 
             if args.mode=='vote':
@@ -132,7 +135,6 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
                 actions = {}
                 for agent_id in environ.agent_ids:
                     actprob = np.zeros(2)
-                    weights = [1,0]
                     raw_net = []
                     for pref, weight in votes.items():#zip(weights, pref_types):
                         _act = policy_map[pref].act(torch.FloatTensor(
@@ -240,7 +242,7 @@ if __name__ == "__main__":
     if args.mode=='vote':
         policy_map = {}
         for pref in saved_preferences:
-            load_path = f'../saved_models/reward_{pref}/reward_target_net.pt'
+            load_path = f'../saved_models/reward_{pref}_medium_imbalanced/reward_target_net.pt'
             policy_map[pref] = DQN(obs_space, act_space, 
                                    seed=SEED, load=load_path)
     else:

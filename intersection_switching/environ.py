@@ -99,7 +99,7 @@ class Environment(gym.Env):
         self.stopped = {}
 
     def _warmup(self):
-        for _ in range(80):
+        for _ in range(120):
             self.eng.next_step()
             
         self.vehicles = {}
@@ -278,7 +278,6 @@ class Environment(gym.Env):
             lane_vehicles = self.eng.get_lane_vehicles()
             for lane_id in intersection.approach_lanes:
                 for veh_id in lane_vehicles[lane_id]:
-                    # votes.append(self.vehicles[veh_id].get_vote())
                     # votes[self.vehicles[veh_id].get_vote()] += 1
                     votes[self.vehicles[veh_id].preference] += 1
 

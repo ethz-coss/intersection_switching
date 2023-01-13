@@ -172,15 +172,12 @@ class SwitchAgent(Agent):
         return reward
 
     def rescale_preferences(self, pref, qvals):
+        alpha = 0.5
         shift = qvals - qvals.max()
-
-        return np.exp(0.5*shift)/ np.sum(np.exp(0.5*shift))
-        if pref=='speed':
-            shift = qvals - qvals.max()
-            return np.exp(shift)/ np.sum(np.exp(shift))
-
-            # return qvals/MAXSPEED
-        elif pref=='wait':
-            return np.clip(qvals, -WAIT_THRESHOLD, 0)
-        elif pref=='stops':
-            return np.clip(qvals, -len(self.env.vehicles), 0)
+        return np.exp(alpha * shift)/ np.sum(np.exp(alpha*shift))
+        # if pref=='speed':
+        #     return qvals/(MAXSPEED * 5)
+        # elif pref=='wait':
+        #     return (np.clip(qvals, -WAIT_THRESHOLD * 5, 0) / (WAIT_THRESHOLD * 5)) + 1
+        # elif pref=='stops':
+        #     return np.clip(qvals, -len(self.env.vehicles) * 5, 0) / (len(self.env.vehicles) * 5) + 1

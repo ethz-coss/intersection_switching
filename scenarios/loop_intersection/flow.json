@@ -170,7 +170,7 @@
     ],
     "interval": 1.0,
     "startTime": 0,
-    "endTime": 10
+    "endTime": 29
   },
     {
       "vehicle": {
@@ -334,6 +334,6 @@
       ],
       "interval": 1.0,
       "startTime": 0,
-      "endTime": 5
+      "endTime": 14
     }
 ]
