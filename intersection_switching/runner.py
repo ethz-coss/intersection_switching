@@ -111,6 +111,10 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
 
         obs = environ.reset()
 
+        pref_types = ['speed', 'wait']
+        # preferences_dict = {id: np.random.choice(pref_types) for id in environ.vehicles.keys()}
+        preferences_dict = {id: 'speed' for id in environ.vehicles.keys()}
+        environ.assign_driver_preferences(preferences_dict)
         while environ.time < num_sim_steps:
             # Dispatch the observations to the model to get the tuple of actions
             # actions = {id: 1*(np.random.random()>0.5) for id in environ.agent_ids} # random policy
@@ -122,13 +126,15 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
             #             obs[agent_id], device=device), epsilon=environ.eps)
             #         actions[agent_id] = act
 
+
             if args.mode=='vote':
+                votes = environ.vote_drivers()
                 actions = {}
                 for agent_id in environ.agent_ids:
                     actprob = np.zeros(2)
                     weights = [1,0]
                     raw_net = []
-                    for i, pref in zip(weights,['speed', 'wait']):
+                    for pref, weight in votes.items():#zip(weights, pref_types):
                         _act = policy_map[pref].act(torch.FloatTensor(
                             obs[agent_id], device=device), 
                             epsilon=environ.eps,
@@ -139,9 +145,9 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
                         normed_act = _act/norm
                         if norm<0:
                             normed_act = 1-normed_act
-                        actprob += i*normed_act
+                        actprob += weight*normed_act
                         # print(pref, _act, normed_act)
-                    act = np.argmax(actprob/sum(weights))
+                    act = np.argmax(actprob/sum(votes.values()))
                     actions[agent_id] = act
                     print(np.array(raw_net)==act)
 

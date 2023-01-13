@@ -30,7 +30,11 @@ class VehicleAgent:
         self.action_space = spaces.Discrete(n_actions)
 
     def get_vote(self):
-        return random.randint(0,1), 1
+        if self.stopped:
+            return 'wait'
+        else:
+            return 'speed'
+        # return random.randint(0,1), 1
 
     def set_objective(self, eng, phase):
         """
