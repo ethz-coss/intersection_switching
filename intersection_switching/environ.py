@@ -272,15 +272,15 @@ class Environment(gym.Env):
         return mfd_detailed
 
     def vote_drivers(self):
-        votes = {'speed': 0, 'wait': 0}
+        votes = {'speed': 0, 'wait': 0, 'stops': 0}
         # votes = []
         for intersection in self.intersections.values():
             lane_vehicles = self.eng.get_lane_vehicles()
             for lane_id in intersection.approach_lanes:
                 for veh_id in lane_vehicles[lane_id]:
                     # votes.append(self.vehicles[veh_id].get_vote())
-                    votes[self.vehicles[veh_id].get_vote()] += 1
-                    # votes[self.vehicles[veh_id].preference] += 1
+                    # votes[self.vehicles[veh_id].get_vote()] += 1
+                    votes[self.vehicles[veh_id].preference] += 1
 
         # return Counter(votes)
         return votes

@@ -111,9 +111,9 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
 
         obs = environ.reset()
 
-        pref_types = ['speed', 'wait']
-        # preferences_dict = {id: np.random.choice(pref_types) for id in environ.vehicles.keys()}
-        preferences_dict = {id: 'speed' for id in environ.vehicles.keys()}
+        pref_types = ['speed', 'stops', 'wait']
+        preferences_dict = {id: np.random.choice(pref_types) for id in environ.vehicles.keys()}
+        # preferences_dict = {id: 'speed' for id in environ.vehicles.keys()}
         environ.assign_driver_preferences(preferences_dict)
         while environ.time < num_sim_steps:
             # Dispatch the observations to the model to get the tuple of actions
@@ -141,15 +141,17 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
                             as_probs=True)
                         _act = _act.numpy().squeeze()
                         raw_net.append(np.argmax(_act))
-                        norm = _act.sum()
-                        normed_act = _act/norm
-                        if norm<0:
-                            normed_act = 1-normed_act
+                        # norm = _act.sum()
+                        # normed_act = _act/norm
+                        # if norm<0:
+                        #     normed_act = 1-normed_act
+
+                        normed_act = environ._agents_dict[agent_id].rescale_preferences(pref, _act)
                         actprob += weight*normed_act
                         # print(pref, _act, normed_act)
                     act = np.argmax(actprob/sum(votes.values()))
                     actions[agent_id] = act
-                    print(np.array(raw_net)==act)
+                    # print(np.array(raw_net)==act)
 
 
             # Execute the actions
@@ -234,7 +236,7 @@ if __name__ == "__main__":
         policy = None
     policies = [policy]
 
-    saved_preferences = ['speed', 'wait']
+    saved_preferences = ['speed', 'stops', 'wait']
     if args.mode=='vote':
         policy_map = {}
         for pref in saved_preferences:

@@ -5,6 +5,9 @@ from gym import spaces
 
 from agents.agent import Agent
 
+MAXSPEED = 40/3.6 # NOTE: maxspeed is hardcoded
+WAIT_THRESHOLD = 120
+
 class SwitchAgent(Agent):
     """
     The class defining an agent which controls the traffic lights using the switching approach
@@ -141,10 +144,9 @@ class SwitchAgent(Agent):
         super().apply_action(eng, action, lane_vehs, lanes_count)
 
     def get_reward(self, type='speed'):
-        MAXSPEED = 100/6 # NOTE: maxspeed is hardcoded
-        WAIT_THRESHOLD = 120
         if type=='speed':
-            return np.mean(self.env.speeds[-self.env.stops_idx:])/MAXSPEED
+            # print(np.mean(self.env.speeds[-self.env.stops_idx:]))
+            return np.mean(self.env.speeds[-self.env.stops_idx:])
         if type=='stops':
             return -np.sum(self.env.stops[-self.env.stops_idx:])
         if type=='delay':
@@ -161,10 +163,24 @@ class SwitchAgent(Agent):
             for veh_id in self.env.vehicles.keys():
                 vehicle = self.env.vehicles[veh_id]
                 waiting_times.append(vehicle.stopped)
-            return -1*np.clip(np.mean(waiting_times), 0, WAIT_THRESHOLD)
+            return -np.mean(waiting_times)
 
     def calculate_reward(self, lanes_count, type='speed'):
         reward = self.get_reward(type=type)
         self.total_rewards += [reward]
         self.reward_count += 1
         return reward
+
+    def rescale_preferences(self, pref, qvals):
+        shift = qvals - qvals.max()
+
+        return np.exp(0.5*shift)/ np.sum(np.exp(0.5*shift))
+        if pref=='speed':
+            shift = qvals - qvals.max()
+            return np.exp(shift)/ np.sum(np.exp(shift))
+
+            # return qvals/MAXSPEED
+        elif pref=='wait':
+            return np.clip(qvals, -WAIT_THRESHOLD, 0)
+        elif pref=='stops':
+            return np.clip(qvals, -len(self.env.vehicles), 0)
