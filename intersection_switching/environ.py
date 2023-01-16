@@ -30,9 +30,9 @@ class Environment(gym.Env):
         :param n_actions: the number of possible actions for the learning agent, corresponds to the number of available phases
         :param n_states: the size of the state space for the learning agent
         """
-        sim_config = config_creator(os.path.dirname(os.path.abspath(args.sim_config)), n_vehs=args.n_vehs)
+        sim_config = config_creator(os.path.dirname(os.path.abspath(args.sim_config)), n_vehs=args.n_vehs, reward=reward_type)
 
-        flow_creator(os.path.dirname(os.path.abspath(args.sim_config)), n_vehs=args.n_vehs)
+        flow_creator(os.path.dirname(os.path.abspath(args.sim_config)), n_vehs=args.n_vehs, reward=reward_type)
         self.n_vehs = args.n_vehs
 
         self.eng = cityflow.Engine(sim_config, thread_num=os.cpu_count())
@@ -103,7 +103,7 @@ class Environment(gym.Env):
         self.waiting_times = []
 
     def _warmup(self):
-        for _ in range(200):
+        for _ in range(1000):
             self.eng.next_step()
             if len(self.eng.get_vehicles())>=sum(self.n_vehs):
                 break
