@@ -99,7 +99,6 @@ class Environment(gym.Env):
         self.stops_idx = 0 # start measuring reward from this index
         self.speeds_idx = 0 # start measuring reward from this index
         self.waiting_times = []
-        self.stopped = {}
 
     def _warmup(self):
         for _ in range(200):
@@ -157,6 +156,7 @@ class Environment(gym.Env):
             # required to track distance of periodic trips
             for veh_id, speed in self.veh_speeds.items():
                 self.vehicles[veh_id].distance += speed
+                self.vehicles[veh_id].speeds.append(speed)
 
             for lane_id, lane in self.lanes.items():
                 lane.update_flow_data(self.eng, self.lane_vehs)
@@ -165,12 +165,14 @@ class Environment(gym.Env):
             for veh_id, speed in self.veh_speeds.items():
                 veh = self.vehicles[veh_id]
                 if speed <= 0.1:
-                    veh.stopped += 1
-                    if veh.stopped == 1:
+                    veh.wait += 1
+                    if veh.wait == 1:
                         stops += 1  # first stop
-                elif speed > 0.1 and veh.stopped:
-                    self.waiting_times.append(veh.stopped)
-                    veh.stopped = 0
+                        veh.stops += 1
+                elif speed > 0.1 and veh.wait:
+                    self.waiting_times.append(veh.wait)
+                    veh.wait_times.append(veh.wait)
+                    veh.wait = 0
             self.speeds.append(np.mean(list(self.veh_speeds.values())))
             self.stops.append(stops)
             self.stops_idx += 1
@@ -244,7 +246,6 @@ class Environment(gym.Env):
         self.lane_vehs = self.eng.get_lane_vehicles()
         self.lanes_count = self.eng.get_lane_vehicle_count()
         self.waiting_times = []
-        self.stopped = {}
         self.speeds = []
         self.stops = []
 
