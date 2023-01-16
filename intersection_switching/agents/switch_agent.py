@@ -145,8 +145,10 @@ class SwitchAgent(Agent):
 
     def get_reward(self, type='speed'):
         if type=='speed':
-            # print(np.mean(self.env.speeds[-self.env.stops_idx:]))
-            return np.mean(self.env.speeds[-self.env.stops_idx:])
+            if self.env.speeds[-self.env.stops_idx:]:
+                return np.mean(self.env.speeds[-self.env.stops_idx:])
+            else:
+                return 0
         if type=='stops':
             return -np.sum(self.env.stops[-self.env.stops_idx:])
         if type=='delay':
@@ -163,8 +165,11 @@ class SwitchAgent(Agent):
             for veh_id in self.env.vehicles.keys():
                 vehicle = self.env.vehicles[veh_id]
                 waiting_times.append(vehicle.wait)
-            return -np.mean(waiting_times)
-
+            if waiting_times:
+                return -np.mean(waiting_times)
+            else:
+                return 0
+            
     def calculate_reward(self, lanes_count, type='speed'):
         reward = self.get_reward(type=type)
         self.total_rewards += [reward]

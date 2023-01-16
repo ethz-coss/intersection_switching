@@ -83,6 +83,8 @@ def parse_args():
                         help="reward function for the agent")
     parser.add_argument("--n_vehs", default=[11, 5], type=int, nargs=2,
                         help="number of vehicles in the scenario")
+    parser.add_argument("--vote_weights", default=[1,0, 0 ], type=int, nargs=3,
+                        help="number of vehicles in the scenario")
     return parser.parse_args()
 
 
@@ -114,7 +116,7 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
         obs = environ.reset()
 
         pref_types = ['speed', 'stops', 'wait']
-        weights = [0.2,0.4,0.4]
+        weights = args.vote_weights
         # preferences_dict = {id: np.random.choice(pref_types) for id in environ.vehicles.keys()}
         preferences_dict = {id: np.random.choice(pref_types, p=weights) for id in environ.vehicles.keys()}
 
@@ -243,7 +245,7 @@ if __name__ == "__main__":
     if args.mode=='vote':
         policy_map = {}
         for pref in saved_preferences:
-            load_path = f'../saved_models/reward_{pref}_medium_imbalanced/reward_target_net.pt'
+            load_path = f'../saved_models/{args.n_vehs[0]}_{args.n_vehs[1]}_{pref}/reward_target_net.pt'
             policy_map[pref] = DQN(obs_space, act_space, 
                                    seed=SEED, load=load_path)
     else:
