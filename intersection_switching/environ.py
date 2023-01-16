@@ -4,7 +4,7 @@ import numpy as np
 import random
 import os
 import functools
-from utils import flow_creator
+from utils import flow_creator, config_creator
 from collections import Counter
 
 from engine.cityflow.intersection import Lane
@@ -30,10 +30,12 @@ class Environment(gym.Env):
         :param n_actions: the number of possible actions for the learning agent, corresponds to the number of available phases
         :param n_states: the size of the state space for the learning agent
         """
+        sim_config = config_creator(os.path.dirname(os.path.abspath(args.sim_config)), n_vehs=args.n_vehs)
+
         flow_creator(os.path.dirname(os.path.abspath(args.sim_config)), n_vehs=args.n_vehs)
         self.n_vehs = args.n_vehs
 
-        self.eng = cityflow.Engine(args.sim_config, thread_num=os.cpu_count())
+        self.eng = cityflow.Engine(sim_config, thread_num=os.cpu_count())
         self.ID = ID
         self.num_sim_steps = args.num_sim_steps
         self.update_freq = args.update_freq      # how often to update the network

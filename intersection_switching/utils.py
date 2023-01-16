@@ -1,4 +1,5 @@
 import json
+import os
 
 DEFAULT_VEHICLE = {
       "length": 5.0,
@@ -11,6 +12,27 @@ DEFAULT_VEHICLE = {
       "maxSpeed": 11.11,
       "headwayTime": 1.5
     }
+
+
+def config_creator(dir, n_vehs, logpath=None):
+    dir = os.path.abspath(dir)
+    
+    config =  {
+        "interval": 1,
+        "seed": 0,
+        "dir": f'{dir}/',
+        "roadnetFile": "roadnet.json",
+        "flowFile": f"flow_{'_'.join(map(str, n_vehs))}.json",
+        "rlTrafficLight": True,
+        "saveReplay": True,
+        "roadnetLogFile": f"frontend/test_sphere.json",
+        "replayLogFile": f"frontend/replay_file.txt",
+        "laneChange": True
+    }
+    sim_config = f"{dir}/rings_{'_'.join(map(str, n_vehs))}.config"
+    with open(sim_config, 'w') as f:
+        f.write(json.dumps(config, indent=2))
+    return sim_config
 
 
 def flow_creator(dir, n_vehs=[11,5], routes=[['road_1','road_2'], ['road_3','road_4']], 
@@ -27,6 +49,6 @@ def flow_creator(dir, n_vehs=[11,5], routes=[['road_1','road_2'], ['road_3','roa
         }
         flow_list.append(params)
 
-    with open(f'{dir}/flow.json', 'w') as f:
+    with open(f"{dir}/flow_{'_'.join(map(str, n_vehs))}.json", 'w') as f:
         f.write(json.dumps(flow_list, indent=2))
     return
