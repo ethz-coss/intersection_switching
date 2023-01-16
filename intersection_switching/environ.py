@@ -30,7 +30,6 @@ class Environment(gym.Env):
         :param n_actions: the number of possible actions for the learning agent, corresponds to the number of available phases
         :param n_states: the size of the state space for the learning agent
         """
-        print('configfile', args.sim_config,os.path.abspath(args.sim_config))
         flow_creator(os.path.dirname(os.path.abspath(args.sim_config)), n_vehs=n_vehs)
         self.n_vehs = n_vehs
         self.eng = cityflow.Engine(args.sim_config, thread_num=os.cpu_count())
