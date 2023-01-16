@@ -4,6 +4,7 @@ import numpy as np
 import random
 import os
 import functools
+from utils import flow_creator
 from collections import Counter
 
 from engine.cityflow.intersection import Lane
@@ -22,14 +23,16 @@ class Environment(gym.Env):
 
     metadata = {"name": "cityflow"}
 
-    def __init__(self, args=None, reward_type='speed', ID=0):
+    def __init__(self, args=None, n_vehs=[30,15], reward_type='speed', ID=0):
         """
         initialises the environment with the arguments parsed from the user input
         :param args: the arguments input by the user
         :param n_actions: the number of possible actions for the learning agent, corresponds to the number of available phases
         :param n_states: the size of the state space for the learning agent
         """
-
+        print('configfile', args.sim_config,os.path.abspath(args.sim_config))
+        flow_creator(os.path.dirname(os.path.abspath(args.sim_config)), n_vehs=n_vehs)
+        self.n_vehs = n_vehs
         self.eng = cityflow.Engine(args.sim_config, thread_num=os.cpu_count())
         self.ID = ID
         self.num_sim_steps = args.num_sim_steps
@@ -99,11 +102,17 @@ class Environment(gym.Env):
         self.stopped = {}
 
     def _warmup(self):
-        for _ in range(120):
+        for _ in range(200):
             self.eng.next_step()
+            if len(self.eng.get_vehicles())>=sum(self.n_vehs):
+                break
+
+        veh_dict = self.eng.get_vehicles()
+        if len(veh_dict)<sum(self.n_vehs):
+            print(f'WARNING: {len(veh_dict)}/{sum(self.n_vehs)} vehicles generated. Increase warmup period.')
             
         self.vehicles = {}
-        for veh_id in self.eng.get_vehicles():
+        for veh_id in veh_dict:
             self.vehicles[veh_id] = VehicleAgent(self, veh_id)
 
     @property

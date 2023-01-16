@@ -229,7 +229,6 @@ if __name__ == "__main__":
 
     act_space = environ.action_space
     obs_space = environ.observation_space
-    print(act_space.n, obs_space.shape)
 
     if args.agents_type in ['learning']:
         policy = DQN(obs_space, act_space, seed=SEED, load=args.load)
