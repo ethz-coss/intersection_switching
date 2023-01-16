@@ -1,0 +1,19 @@
+Json parsing error at line 1
+The document is empty.
+Json parsing error
+load config failed!
+/cluster/apps/nss/gcc-6.3.0/python/3.8.5/x86_64/lib64/python3.8/site-packages/numpy/core/fromnumeric.py:3372: RuntimeWarning: Mean of empty slice.
+  return _methods._mean(a, axis=axis, dtype=dtype,
+/cluster/apps/nss/gcc-6.3.0/python/3.8.5/x86_64/lib64/python3.8/site-packages/numpy/core/_methods.py:170: RuntimeWarning: invalid value encountered in double_scalars
+  ret = ret.dtype.type(ret / rcount)
+saving to ../saved_models/32_16_speeds
+WARNING: 0/48 vehicles generated. Increase warmup period.
+actions: 2
+episode  0
+WARNING: 0/48 vehicles generated. Increase warmup period.
+Traceback (most recent call last):
+  File "runner.py", line 257, in <module>
+    run_exp(environ, args, num_episodes, num_sim_steps, logger, policies[0], policy_map, detailed_log)
+  File "runner.py", line 172, in run_exp
+    reward = torch.tensor(
+TypeError: must be real number, not NoneType

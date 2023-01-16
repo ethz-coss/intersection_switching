@@ -1,0 +1,14 @@
+saving to ../saved_models/32_16_wait
+WARNING: 45/48 vehicles generated. Increase warmup period.
+actions: 2
+episode  0
+Traceback (most recent call last):
+  File "runner.py", line 257, in <module>
+    run_exp(environ, args, num_episodes, num_sim_steps, logger, policies[0], policy_map, detailed_log)
+  File "runner.py", line 162, in run_exp
+    next_obs, rewards, dones, info = environ.step(actions)
+  File "/cluster/home/mkorecki/intersection_switching/intersection_switching/environ.py", line 134, in step
+    self.sub_steps()
+  File "/cluster/home/mkorecki/intersection_switching/intersection_switching/environ.py", line 158, in sub_steps
+    self.vehicles[veh_id].distance += speed
+KeyError: 'flow_0_29'

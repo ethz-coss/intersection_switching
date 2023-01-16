@@ -6,7 +6,7 @@ import torch
 import random
 import pickle
 import dill
-from network_parser import get_network
+# from network_parser import get_network
 
 class Logger:
     """
@@ -89,7 +89,7 @@ class Logger:
         self.mfd = output
 
     def log_delays(self, config, environ):
-        network, roads, flows = get_network(config)
+        # network, roads, flows = get_network(config)
         delays = []
         travel_times = []
         for veh_id, veh_data in environ.vehicles.items():

@@ -1,0 +1,18 @@
+Traceback (most recent call last):
+  File "runner.py", line 7, in <module>
+    from logger import Logger
+  File "/cluster/home/mkorecki/intersection_switching/intersection_switching/logger.py", line 9, in <module>
+    from network_parser import get_network
+  File "/cluster/home/mkorecki/intersection_switching/intersection_switching/network_parser.py", line 3, in <module>
+    from shapely.geometry import Point, LineString
+  File "/cluster/apps/nss/gcc-6.3.0/python/3.8.5/x86_64/lib64/python3.8/site-packages/shapely/geometry/__init__.py", line 4, in <module>
+    from .base import CAP_STYLE, JOIN_STYLE
+  File "/cluster/apps/nss/gcc-6.3.0/python/3.8.5/x86_64/lib64/python3.8/site-packages/shapely/geometry/base.py", line 19, in <module>
+    from shapely.coords import CoordinateSequence
+  File "/cluster/apps/nss/gcc-6.3.0/python/3.8.5/x86_64/lib64/python3.8/site-packages/shapely/coords.py", line 8, in <module>
+    from shapely.geos import lgeos
+  File "/cluster/apps/nss/gcc-6.3.0/python/3.8.5/x86_64/lib64/python3.8/site-packages/shapely/geos.py", line 87, in <module>
+    _lgeos = load_dll('geos_c', fallbacks=alt_paths)
+  File "/cluster/apps/nss/gcc-6.3.0/python/3.8.5/x86_64/lib64/python3.8/site-packages/shapely/geos.py", line 60, in load_dll
+    raise OSError(
+OSError: Could not find lib geos_c or load any of its variants ['libgeos_c.so.1', 'libgeos_c.so'].
