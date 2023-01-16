@@ -23,7 +23,7 @@ class Environment(gym.Env):
 
     metadata = {"name": "cityflow"}
 
-    def __init__(self, args=None, n_vehs=[30,15], reward_type='speed', ID=0):
+    def __init__(self, args=None, reward_type='speed', ID=0):
         """
         initialises the environment with the arguments parsed from the user input
         :param args: the arguments input by the user
@@ -31,8 +31,8 @@ class Environment(gym.Env):
         :param n_states: the size of the state space for the learning agent
         """
         print('configfile', args.sim_config,os.path.abspath(args.sim_config))
-        flow_creator(os.path.dirname(os.path.abspath(args.sim_config)), n_vehs=n_vehs)
-        self.n_vehs = n_vehs
+        flow_creator(os.path.dirname(os.path.abspath(args.sim_config)), n_vehs=args.n_vehs)
+        self.n_vehs = args.n_vehs
         self.eng = cityflow.Engine(args.sim_config, thread_num=os.cpu_count())
         self.ID = ID
         self.num_sim_steps = args.num_sim_steps

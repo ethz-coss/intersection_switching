@@ -33,12 +33,16 @@ class Logger:
 
         config_dir, config_file = os.path.split(args.sim_config)
         scenario_name = os.path.basename(config_dir)
-        exp_name = f"{os.path.splitext(config_file)[0]}_{args.agents_type}_{args.reward_type}"
+        exp_name = f"{args.n_vehs[0]}_{args.n_vehs[1]}_{args.reward_type}"
 
         if args.load != None or args.load_cluster != None:
             scenario_name += "_load"
 
-        self.log_path = os.path.join(args.path, scenario_name, exp_name)
+        if args.mode == 'vote':
+            self.log_path = os.path.join(args.path, exp_name)
+        elif args.mode == 'train':
+            self.log_path = os.path.join("../saved_models", exp_name)
+
         head, tail = os.path.split(self.log_path)
         i = 1
 

@@ -81,6 +81,8 @@ def parse_args():
                         help="gamma parameter for the DQN")
     parser.add_argument("--reward_type", default='speed', type=str,
                         help="reward function for the agent")
+    parser.add_argument("--n_vehs", default=[11, 5], type=int, nargs=2,
+                        help="number of vehicles in the scenario")
     return parser.parse_args()
 
 
