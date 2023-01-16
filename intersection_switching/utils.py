@@ -27,7 +27,6 @@ def flow_creator(dir, n_vehs=[11,5], routes=[['road_1','road_2'], ['road_3','roa
         }
         flow_list.append(params)
 
-    print(f'{dir}/flow.json')
     with open(f'{dir}/flow.json', 'w') as f:
         f.write(json.dumps(flow_list, indent=2))
     return

@@ -227,7 +227,7 @@ if __name__ == "__main__":
     args = parse_args()
     logger = Logger(args)
 
-    environ = Environment(args, args.reward_type)
+    environ = Environment(args, reward_type=args.reward_type)
 
     act_space = environ.action_space
     obs_space = environ.observation_space

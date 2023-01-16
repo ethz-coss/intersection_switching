@@ -119,6 +119,18 @@ class Logger:
             for move in agent.movements.values():
                 waiting_time_dict[agent.ID].update(
                     {move.ID: (move.max_waiting_time, move.waiting_time_list)})
+
+        veh_wait_times = {}
+        veh_speed_hist = {}
+        veh_stops = {}
+        veh_delays = {}
+
+        for i, (veh_id, veh) in enumerate(environ.vehicles.items()):
+            veh_wait_times[veh_id] = veh.wait_times
+            veh_speed_hist[veh_id] = veh.speeds
+            veh_stops[veh_id] = veh.stops
+            veh_delays[veh_id] = self.delays[-1]
+
         if policy:
             with open(os.path.join(self.log_path, "memory.dill"), "wb") as f:
                 dill.dump(policy.memory.memory, f)
@@ -127,6 +139,15 @@ class Logger:
             pickle.dump(environ.agent_history, f)
         with open(os.path.join(self.log_path, "waiting_time.pickle"), "wb") as f:
             pickle.dump(waiting_time_dict, f)
+
+        with open(os.path.join(self.log_path, "veh_speed_hist.pickle"), "wb") as f:
+            pickle.dump(veh_speed_hist, f)
+        with open(os.path.join(self.log_path, "veh_wait_time.pickle"), "wb") as f:
+            pickle.dump(veh_wait_times, f)
+        with open(os.path.join(self.log_path, "veh_stops.pickle"), "wb") as f:
+            pickle.dump(veh_stops, f)
+        with open(os.path.join(self.log_path, "veh_delays.pickle"), "wb") as f:
+            pickle.dump(veh_delays, f)
 
         with open(os.path.join(self.log_path, "agents_rewards.pickle"), "wb") as f:
             pickle.dump(reward_dict, f)

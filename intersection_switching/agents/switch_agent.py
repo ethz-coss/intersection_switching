@@ -73,7 +73,7 @@ class SwitchAgent(Agent):
             for veh_id in lane_vehicles[lane_id]:
                 vehicle = self.env.vehicles[veh_id]
                 speeds.append(self.env.veh_speeds[veh_id])
-                waiting_times.append(vehicle.stopped)
+                waiting_times.append(vehicle.wait)
             density = len(lane_vehicles[lane_id]) * VEHLENGTH / ROADLENGTH
             ave_speed = np.mean(speeds or 0)
             ave_wait = np.mean(waiting_times or 0)
@@ -162,7 +162,7 @@ class SwitchAgent(Agent):
             waiting_times = []
             for veh_id in self.env.vehicles.keys():
                 vehicle = self.env.vehicles[veh_id]
-                waiting_times.append(vehicle.stopped)
+                waiting_times.append(vehicle.wait)
             return -np.mean(waiting_times)
 
     def calculate_reward(self, lanes_count, type='speed'):

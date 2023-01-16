@@ -16,7 +16,10 @@ class VehicleAgent:
         self.ID = ID
         self.env = env
 
-        self.stopped = 0
+        self.wait = 0
+        self.stops = 0
+        self.speeds = []
+        self.wait_times = []
         self.distance = 0
         self.total_rewards = []
         self.start_time = 0
@@ -54,7 +57,10 @@ class VehicleAgent:
         Resets the set containing the vehicle ids for each movement and the arr/dep vehicles numbers as well as the waiting times
         the set represents the vehicles waiting on incoming lanes of the movement
         """
-        self.stopped = 0
+        self.wait = 0
+        self.stops = []
+        self.speeds = []
+        self.wait_times = []
         self.distance = 0
         self.total_rewards = []
         self.start_time = 0
