@@ -129,6 +129,9 @@ class Logger:
         veh_delays = {}
 
         for i, (veh_id, veh) in enumerate(environ.vehicles.items()):
+            if veh.wait: # account for vehicles still waiting at the end of a simulation
+                veh.wait_times.append(veh.wait)
+                veh.wait = 0
             veh_wait_times[veh_id] = veh.wait_times
             veh_speed_hist[veh_id] = veh.speeds
             veh_stops[veh_id] = veh.stops
