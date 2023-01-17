@@ -83,7 +83,7 @@ def parse_args():
                         help="reward function for the agent")
     parser.add_argument("--n_vehs", default=[11, 5], type=int, nargs=2,
                         help="number of vehicles in the scenario")
-    parser.add_argument("--vote_weights", default=[1,0, 0 ], type=int, nargs=3,
+    parser.add_argument("--vote_weights", default=[1,0, 0 ], type=float, nargs=3,
                         help="number of vehicles in the scenario")
     return parser.parse_args()
 
@@ -139,14 +139,14 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
                 actions = {}
                 for agent_id in environ.agent_ids:
                     actprob = np.zeros(2)
-                    raw_net = []
+                    raw_net = {}
                     for pref, weight in votes.items():#zip(weights, pref_types):
                         _act = policy_map[pref].act(torch.FloatTensor(
                             obs[agent_id], device=device), 
                             epsilon=environ.eps,
                             as_probs=True)
                         _act = _act.numpy().squeeze()
-                        raw_net.append(np.argmax(_act))
+                        raw_net.update({pref : np.argmax(_act)})
                         # norm = _act.sum()
                         # normed_act = _act/norm
                         # if norm<0:
@@ -156,9 +156,11 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
                         actprob += weight*normed_act
                         # print(pref, _act, normed_act)
                     act = np.argmax(actprob/sum(votes.values()))
+                    raw_net.update({"reference" : act})
                     actions[agent_id] = act
                     # print(np.array(raw_net)==act)
-
+                    logger.objective_alignment.append(raw_net)
+                    
 
             # Execute the actions
             next_obs, rewards, dones, info = environ.step(actions)

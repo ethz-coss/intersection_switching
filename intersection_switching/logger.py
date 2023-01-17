@@ -29,6 +29,8 @@ class Logger:
         self.delays = []
         self.travel_times = []
 
+        self.objective_alignment = []
+
         self.reward = 0
 
         config_dir, config_file = os.path.split(args.sim_config)
@@ -39,6 +41,7 @@ class Logger:
             scenario_name += "_load"
 
         if args.mode == 'vote':
+            exp_name =  f"{args.n_vehs[0]}_{args.n_vehs[1]}_{args.vote_weights[0]}_{args.vote_weights[1]}_{args.vote_weights[2]}"
             self.log_path = os.path.join(args.path, exp_name)
         elif args.mode == 'train':
             self.log_path = os.path.join("../saved_models", exp_name)
@@ -166,6 +169,9 @@ class Logger:
         with open(os.path.join(self.log_path, "travel_times.pickle"), "wb") as f:
             pickle.dump(self.travel_times, f)
 
+        with open(os.path.join(self.log_path, "obj_alignment.pickle"), "wb") as f:
+            pickle.dump(self.objective_alignment, f)        
+            
         if environ.agents_type in ['learning', 'hybrid', 'presslight', 'policy', 'denflow']:
             with open(os.path.join(self.log_path, "episode_rewards.pickle"), "wb") as f:
                 pickle.dump(self.plot_rewards, f)
