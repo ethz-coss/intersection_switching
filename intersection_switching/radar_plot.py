@@ -70,10 +70,10 @@ def set_rgrids(self, radii, labels=None, angle=None, fmt=None,
 
 class ComplexRadar():
     def __init__(self, fig, variables, ranges,
-                 n_ordinate_levels=6):
+                 n_ordinate_levels=5):
         angles = np.arange(0, 360, 360./len(variables))
 
-        axes = [fig.add_axes([0.1,0.1,0.9,0.9],polar=True,
+        axes = [fig.add_axes([0.025,0.05,0.9,0.9],polar=True,
                 label = "axes{}".format(i)) 
                 for i in range(len(variables))]
         l, text = axes[0].set_thetagrids(angles, 
@@ -98,12 +98,28 @@ class ComplexRadar():
             else:
                 gridlabel[0] = "" # clean up origin
             # ax.set_rgrids(grid, labels=gridlabel, angle=angles[i])
+            
             set_rgrids(ax, grid, labels=gridlabel, angle=angles[i])
             #ax.spines["polar"].set_visible(False)
             ax.set_ylim(*ranges[i])
+            for label,rot in zip(ax.get_xticklabels(),grid):
+                if label.get_text() == 'Speed':
+                    label.set_verticalalignment("top")
+                    label.set_horizontalalignment("left")
+                elif label.get_text() == 'Wait Time':
+                    label.set_verticalalignment("top")
+                    label.set_horizontalalignment("center")
+                else:
+                    label.set_rotation(rot*270./np.pi)
+                    label.set_verticalalignment("top")
+                    label.set_horizontalalignment("right")
+                    label.set_rotation_mode("anchor")
+            
         # variables for plotting
         self.angle = np.deg2rad(np.r_[angles, angles[0]])
         self.ranges = ranges
+
+        
         self.ax = axes[0]
     def plot(self, data, *args, **kw):
         sdata = _scale_data(data, self.ranges)

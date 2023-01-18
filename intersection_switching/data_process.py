@@ -14,7 +14,7 @@ high_balanced = [32, 32]
 high_unbalanced = [32, 16]
 
 
-traffic_conditions = [medium_unbalanced]#, low_unbalanced]#, medium_balanced, medium_unbalanced, high_balanced, high_unbalanced]
+traffic_conditions = [low_balanced, low_unbalanced, medium_balanced, medium_unbalanced, high_balanced, high_unbalanced]
 
 pref_types = ['speed', 'stops', 'wait']
 
@@ -33,7 +33,7 @@ vote_quarter_4 = [0.0, 0.25, 0.75]
 vote_quarter_5 = [0.25, 0.75, 0.0]
 vote_quarter_6 = [0.0, 0.75, 0.25]
 
-vote_types = [vote_speed, vote_stops, vote_wait, vote_uniform_1, vote_uniform_2, vote_uniform_3]#, vote_quarter_1, vote_quarter_2, vote_quarter_3, vote_quarter_4, vote_quarter_5, vote_quarter_6]
+# vote_types = [vote_speed, vote_stops, vote_wait, vote_uniform_1, vote_uniform_2, vote_uniform_3]#, vote_quarter_1, vote_quarter_2, vote_quarter_3, vote_quarter_4, vote_quarter_5, vote_quarter_6]
 
 # vote_types = [vote_uniform_1, vote_uniform_2, vote_uniform_3]
 vote_types = [vote_stops, vote_wait, vote_uniform_3]
@@ -41,10 +41,9 @@ vote_types = [vote_stops, vote_wait, vote_uniform_3]
 categories = ['Speed', 'Number of Stops', 'Wait Time']
 categories = [*categories, categories[0]]
 
-data = []
-names = []
-
 for traffic in traffic_conditions:
+    data = []
+    names = []
     for vote in vote_types:
 
         path = f"../runs/{traffic[0]}_{traffic[1]}_{vote[0]}_{vote[1]}_{vote[2]}"
@@ -80,21 +79,31 @@ for traffic in traffic_conditions:
         result = [avg_speed, avg_stops, avg_wait]
         result = [*result, result[0]]
         data.append(result)
-        names.append(f"{vote[0]}_{vote[1]}_{vote[2]}")
+
+        if vote == [0.0, 1.0, 0.0]:
+            name = "Stops"
+        elif vote == [0.0, 0.0, 1.0]:
+            name = "Wait Times"
+        else:
+            name = "Stops + Wait Times"
+        
+        names.append(name)
 
 
-    variables = ('Speed', 'Number of Stops', 'Wait Time')
-
-    
+    variables = ('Speed', 'Stops', 'Wait Time')
     ranges = [(0, max([x[0] for x in data])), (max([x[1] for x in data]), 0), (max([x[2] for x in data]), 0)]            
     # plotting
+    
     fig1 = plt.figure()
     radar = ComplexRadar(fig1, variables, ranges)
 
     for d, name in zip(data, names):
         radar.plot(d, label=name)
         radar.fill(d, alpha=0.2)
+        
     fig1.legend()
-    plt.show()
+    
+    save_name = f"../figs/{traffic[0]}_{traffic[1]}.pdf"
+    fig1.savefig(save_name, format='pdf')
 
 
