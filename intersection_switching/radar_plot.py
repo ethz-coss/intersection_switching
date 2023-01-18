@@ -68,14 +68,31 @@ def set_rgrids(self, radii, labels=None, angle=None, fmt=None,
         t.update(kwargs)
     return self.yaxis.get_gridlines(), self.yaxis.get_ticklabels()
 
+
+def polar_twin(ax):
+    ax2 = ax.figure.add_axes(ax.get_position(), projection='polar', 
+                             label='twin', frameon=False,
+                             theta_direction=ax.get_theta_direction(),
+                             theta_offset=ax.get_theta_offset())
+    ax2.xaxis.set_visible(False)
+    # There should be a method for this, but there isn't... Pull request?
+    ax2._r_label_position._t = (22.5 + 180, 0.0)
+    ax2._r_label_position.invalidate()
+    # Ensure that original axes tick labels are on top of plots in twinned axes
+    for label in ax.get_yticklabels():
+        ax.figure.texts.append(label)
+    return ax2
+
 class ComplexRadar():
-    def __init__(self, fig, variables, ranges,
+    def __init__(self, host, variables, ranges,
                  n_ordinate_levels=5):
         angles = np.arange(0, 360, 360./len(variables))
 
-        axes = [fig.add_axes([0.025,0.05,0.9,0.9],polar=True,
-                label = "axes{}".format(i)) 
-                for i in range(len(variables))]
+        axes = [host] + [polar_twin(host) 
+                for i in range(len(variables)-1)]
+        # axes = [fig.add_axes([0.025,0.05,0.9,0.9],polar=True,
+        #         label = "axes{}".format(i)) 
+        #         for i in range(len(variables))]
         l, text = axes[0].set_thetagrids(angles, 
                                          labels=variables)
         [txt.set_rotation(angle-90) for txt, angle 
