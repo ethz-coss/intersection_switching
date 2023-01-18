@@ -152,7 +152,7 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
                         raw_net.update({pref : np.argmax(_act)})
 
                         if args.vote_type=='majority':
-                            weight = 1*(weight==np.max(votes.keys())) # zeros out the losing vote
+                            weight = 1*(weight==np.max(list(votes.values()))) # zeros out the losing vote
 
                         normed_act = environ._agents_dict[agent_id].rescale_preferences(pref, _act)
                         actprob += weight*normed_act

@@ -41,7 +41,7 @@ vote_types = [vote_stops, vote_wait, vote_uniform_3]
 categories = ['Speed', 'Number of Stops', 'Wait Time']
 categories = [*categories, categories[0]]
 
-for traffic in traffic_conditions:
+for j, traffic in enumerate(traffic_conditions):
     data = []
     names = []
     for vote in vote_types:
@@ -93,17 +93,39 @@ for traffic in traffic_conditions:
     variables = ('Speed', 'Stops', 'Wait Time')
     ranges = [(0, max([x[0] for x in data])), (max([x[1] for x in data]), 0), (max([x[2] for x in data]), 0)]            
     # plotting
-    
-    fig1 = plt.figure()
-    radar = ComplexRadar(fig1, variables, ranges)
+
+    fig1, axes = plt.subplots(1,1, subplot_kw={'projection':'polar'})
+
+    radar = ComplexRadar(axes, variables, ranges)
 
     for d, name in zip(data, names):
         radar.plot(d, label=name)
+
         radar.fill(d, alpha=0.2)
         
-    fig1.legend()
     
     save_name = f"../figs/{traffic[0]}_{traffic[1]}.pdf"
-    fig1.savefig(save_name, format='pdf')
+    # save_name = f"../figs/figure1.pdf"
+    fig1.legend()
+
+    if traffic[0] == 11:
+        if traffic[1] == 11:
+            axes.set_title("Low Balanced")
+        else:
+            axes.set_title("Low Unbalanced")
+    elif traffic[0] == 22:
+        if traffic[1] == 22:
+            axes.set_title("Medium Balanced")
+        else:
+            axes.set_title("Medium Unbalanced")
+    elif traffic[0] == 32:
+        if traffic[1] == 32:
+            axes.set_title("High Balanced")
+        else:
+            axes.set_title("High Unbalanced")
+
+                    
+        
+    fig1.savefig(save_name, format='pdf', bbox_inches='tight')
 
 
