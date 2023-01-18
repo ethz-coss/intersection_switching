@@ -85,6 +85,9 @@ def parse_args():
                         help="number of vehicles in the scenario")
     parser.add_argument("--vote_weights", default=[1,0, 0 ], type=float, nargs=3,
                         help="number of vehicles in the scenario")
+    parser.add_argument("--vote_type", default='proportional', type=str,
+                        help="type of voting used")
+
     return parser.parse_args()
 
 
@@ -147,10 +150,9 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
                             as_probs=True)
                         _act = _act.numpy().squeeze()
                         raw_net.update({pref : np.argmax(_act)})
-                        # norm = _act.sum()
-                        # normed_act = _act/norm
-                        # if norm<0:
-                        #     normed_act = 1-normed_act
+
+                        if args.vote_type=='majority':
+                            weight = 1*(weight==np.max(votes.keys())) # zeros out the losing vote
 
                         normed_act = environ._agents_dict[agent_id].rescale_preferences(pref, _act)
                         actprob += weight*normed_act
