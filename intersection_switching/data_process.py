@@ -1,7 +1,8 @@
-import plotly.graph_objects as go
-import plotly.offline as pyo
 import pickle
 import numpy as np
+import matplotlib.pyplot as plt
+
+from radar_plot import ComplexRadar 
 
 low_balanced = [11, 11]
 low_unbalanced = [11, 6]
@@ -13,8 +14,9 @@ high_balanced = [32, 32]
 high_unbalanced = [32, 16]
 
 
-traffic_conditions = [low_balanced]#, low_unbalanced]#, medium_balanced, medium_unbalanced, high_balanced, high_unbalanced]
+traffic_conditions = [medium_unbalanced]#, low_unbalanced]#, medium_balanced, medium_unbalanced, high_balanced, high_unbalanced]
 
+pref_types = ['speed', 'stops', 'wait']
 
 vote_speed = [1.0, 0.0, 0.0]
 vote_stops = [0.0, 1.0, 0.0]
@@ -31,12 +33,16 @@ vote_quarter_4 = [0.0, 0.25, 0.75]
 vote_quarter_5 = [0.25, 0.75, 0.0]
 vote_quarter_6 = [0.0, 0.75, 0.25]
 
-vote_types = [vote_stops]#, vote_stops, vote_wait]#, vote_uniform_1, vote_uniform_2, vote_uniform_3]#, vote_quarter_1, vote_quarter_2, vote_quarter_3, vote_quarter_4, vote_quarter_5, vote_quarter_6]
+vote_types = [vote_speed, vote_stops, vote_wait, vote_uniform_1, vote_uniform_2, vote_uniform_3]#, vote_quarter_1, vote_quarter_2, vote_quarter_3, vote_quarter_4, vote_quarter_5, vote_quarter_6]
+
+# vote_types = [vote_uniform_1, vote_uniform_2, vote_uniform_3]
+vote_types = [vote_stops, vote_wait, vote_uniform_3]
 
 categories = ['Speed', 'Number of Stops', 'Wait Time']
 categories = [*categories, categories[0]]
 
 data = []
+names = []
 
 for traffic in traffic_conditions:
     for vote in vote_types:
@@ -52,38 +58,43 @@ for traffic in traffic_conditions:
             
         avg_speed = np.mean([np.mean(speeds[x]) for x in speeds.keys()])
         var_speed = np.var(([np.mean(speeds[x]) for x in speeds.keys()]))
-        print(avg_speed, var_speed)
+        print("speed: ", avg_speed, var_speed)
 
         with open(stops_path, "rb") as f:
             stops = pickle.load(f)
 
         avg_stops = np.mean([np.mean(stops[x]) for x in stops.keys()])
         var_stops = np.var(([np.mean(stops[x]) for x in stops.keys()]))
-        print(avg_stops, var_stops)
+        print("stops: ", avg_stops, var_stops)
 
         with open(wait_path, "rb") as f:
             wait = pickle.load(f)
 
-        print([wait[x] for x in wait.keys()])
+        wait = {k:v if v else [0] for k,v in wait.items()}
+
         avg_wait = np.mean([np.mean(wait[x]) for x in wait.keys()])
         var_wait = np.var(([np.mean(wait[x]) for x in wait.keys()]))
-        print(avg_wait, var_wait)
+        print("wait: ", avg_wait, var_wait)
 
 
         result = [avg_speed, avg_stops, avg_wait]
         result = [*result, result[0]]
-        data.append(go.Scatterpolar(r=result, theta=categories, name=f'{vote[0]}_{vote[1]}_{vote[2]}'))
+        data.append(result)
+        names.append(f"{vote[0]}_{vote[1]}_{vote[2]}")
 
 
+    variables = ('Speed', 'Number of Stops', 'Wait Time')
 
-    fig = go.Figure(
-        data=data,
-        layout=go.Layout(
-            title=go.layout.Title(text='Restaurant comparison'),
-            polar={'radialaxis': {'visible': True}},
-            showlegend=True
-        )
-    )
+    
+    ranges = [(0, max([x[0] for x in data])), (max([x[1] for x in data]), 0), (max([x[2] for x in data]), 0)]            
+    # plotting
+    fig1 = plt.figure()
+    radar = ComplexRadar(fig1, variables, ranges)
 
-    pyo.plot(fig)
-    fig.show()
+    for d, name in zip(data, names):
+        radar.plot(d, label=name)
+        radar.fill(d, alpha=0.2)
+    fig1.legend()
+    plt.show()
+
+
