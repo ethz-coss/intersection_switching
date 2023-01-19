@@ -1,6 +1,8 @@
 runs/*
 models/*
 saved_models/*
+majority_100/*
+proportional_100/*
 *.pickle
 *.dill
 logs.txt
