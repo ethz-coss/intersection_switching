@@ -101,9 +101,12 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
     environ.best_epoch = 0
 
     environ.eng.set_save_replay(open=False)
-    environ.eng.set_random_seed(2)
-    random.seed(2)
-    np.random.seed(2)
+    # environ.eng.set_random_seed(SEED)
+    # random.seed(SEED)
+    # np.random.seed(SEED)
+
+    random.seed()
+    np.random.seed()
 
     log_phases = False
 

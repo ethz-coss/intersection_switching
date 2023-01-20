@@ -52,7 +52,7 @@ class Environment(gym.Env):
         self._warmup()
 
         self.time = 0
-        random.seed(2)
+        random.seed()
 
         self.veh_speeds = self.eng.get_vehicle_speed()
         self.lane_vehs = self.eng.get_lane_vehicles()

@@ -37,95 +37,143 @@ vote_quarter_6 = [0.0, 0.75, 0.25]
 
 # vote_types = [vote_uniform_1, vote_uniform_2, vote_uniform_3]
 vote_types = [vote_stops, vote_wait, vote_uniform_3]
+vote_modes = ["proportional", "majority"]
 
 categories = ['Speed', 'Number of Stops', 'Wait Time']
 categories = [*categories, categories[0]]
 
-for j, traffic in enumerate(traffic_conditions):
-    data = []
-    names = []
-    for vote in vote_types:
+all_data = {}
+all_names = {}
 
-        path = f"../runs/{traffic[0]}_{traffic[1]}_{vote[0]}_{vote[1]}_{vote[2]}"
+for vote_type in vote_modes:
+    for j, traffic in enumerate(traffic_conditions):
+        data = []
+        names = []
 
-        speeds_path = path + "/veh_speed_hist.pickle"
-        stops_path = path + "/veh_stops.pickle"
-        wait_path = path + "/veh_wait_time.pickle"
+        for vote in vote_types:
+            avg_total_waits = []
+            avg_total_stops = []
+            avg_total_speeds = []
+            for i in range(100):
+                if (vote == vote_stops or vote == vote_wait) and i >= 1:
+                    break
 
-        with open(speeds_path, "rb") as f:
-            speeds = pickle.load(f)
-            
-        avg_speed = np.mean([np.mean(speeds[x]) for x in speeds.keys()])
-        var_speed = np.var(([np.mean(speeds[x]) for x in speeds.keys()]))
-        print("speed: ", avg_speed, var_speed)
+                if i == 0:
+                    path = f"../runs/{vote_type}/{traffic[0]}_{traffic[1]}_{vote[0]}_{vote[1]}_{vote[2]}"
+                else:
+                    path = f"../runs/{vote_type}/{traffic[0]}_{traffic[1]}_{vote[0]}_{vote[1]}_{vote[2]}({i})"
 
-        with open(stops_path, "rb") as f:
-            stops = pickle.load(f)
+                speeds_path = path + "/veh_speed_hist.pickle"
+                stops_path = path + "/veh_stops.pickle"
+                wait_path = path + "/veh_wait_time.pickle"
 
-        avg_stops = np.mean([np.mean(stops[x]) for x in stops.keys()])
-        var_stops = np.var(([np.mean(stops[x]) for x in stops.keys()]))
-        print("stops: ", avg_stops, var_stops)
+                with open(speeds_path, "rb") as f:
+                    speeds = pickle.load(f)
 
-        with open(wait_path, "rb") as f:
-            wait = pickle.load(f)
+                avg_speed = np.mean([np.mean(speeds[x]) for x in speeds.keys()])
+                var_speed = np.std(([np.mean(speeds[x]) for x in speeds.keys()]))
+                # print("speed: ", avg_speed, var_speed)
 
-        wait = {k:v if v else [0] for k,v in wait.items()}
+                with open(stops_path, "rb") as f:
+                    stops = pickle.load(f)
 
-        avg_wait = np.mean([np.mean(wait[x]) for x in wait.keys()])
-        var_wait = np.var(([np.mean(wait[x]) for x in wait.keys()]))
-        print("wait: ", avg_wait, var_wait)
+                avg_stops = np.mean([np.mean(stops[x]) for x in stops.keys()])
+                var_stops = np.std(([np.mean(stops[x]) for x in stops.keys()]))
+                # print("stops: ", avg_stops, var_stops)
+
+                with open(wait_path, "rb") as f:
+                    wait = pickle.load(f)
+
+                wait = {k:v if v else [0] for k,v in wait.items()}
+
+                avg_wait = np.mean([np.mean(wait[x]) for x in wait.keys()])
+                var_wait = np.std(([np.mean(wait[x]) for x in wait.keys()]))
+                # print("wait: ", avg_wait, var_wait)
+
+                avg_total_waits.append(avg_wait)
+                avg_total_stops.append(avg_stops)
+                avg_total_speeds.append(avg_speed)
 
 
-        result = [avg_speed, avg_stops, avg_wait]
-        result = [*result, result[0]]
-        data.append(result)
+            # print(vote, len(avg_total_waits))
+            # print("wait: ", np.mean(avg_total_waits), np.std(avg_total_waits))
+            # print("stops: ", np.mean(avg_total_stops), np.std(avg_total_stops))
+            # print("speeds: ", np.mean(avg_total_speeds), np.std(avg_total_speeds))
 
-        if vote == [0.0, 1.0, 0.0]:
-            name = "Stops"
-        elif vote == [0.0, 0.0, 1.0]:
-            name = "Wait Times"
-        else:
-            name = "Stops + Wait Times"
+            result = [np.mean(avg_total_speeds), np.mean(avg_total_stops), np.mean(avg_total_waits)]
+            result = [*result, result[0]]
+            data.append(result)
+
+            if vote == [0.0, 1.0, 0.0]:
+                name = "Stops"
+            elif vote == [0.0, 0.0, 1.0]:
+                name = "Wait Times"
+            else:
+                name = "Prop S+W"
+
+            names.append(name)
         
-        names.append(name)
+        key = f"{traffic[0]}_{traffic[1]}_{vote_type}"
+        all_data.update({key:data})
+        all_names.update({key:names})
 
+plt.rcParams.update({'font.size': 12})
 
-    variables = ('Speed', 'Stops', 'Wait Time')
-    ranges = [(0, max([x[0] for x in data])), (max([x[1] for x in data]), 0), (max([x[2] for x in data]), 0)]            
-    # plotting
+for traffic in traffic_conditions:
 
-    fig1, axes = plt.subplots(1,1, subplot_kw={'projection':'polar'})
-
-    radar = ComplexRadar(axes, variables, ranges)
-
-    for d, name in zip(data, names):
-        radar.plot(d, label=name)
-
-        radar.fill(d, alpha=0.2)
-        
+    key_prop = f"{traffic[0]}_{traffic[1]}_proportional"
+    key_major = f"{traffic[0]}_{traffic[1]}_majority"
     
-    save_name = f"../figs/{traffic[0]}_{traffic[1]}.pdf"
-    # save_name = f"../figs/figure1.pdf"
-    fig1.legend()
+    ranges = [(0, max(max([x[0] for x in all_data[key_prop]]), max([x[0] for x in all_data[key_major]]))),
+              (max(max([x[1] for x in all_data[key_prop]]), max([x[1] for x in all_data[key_major]])), 0),
+              (max(max([x[2] for x in all_data[key_prop]]), max([x[2] for x in all_data[key_major]])), 0)
+               ]
 
-    if traffic[0] == 11:
-        if traffic[1] == 11:
-            axes.set_title("Low Balanced")
+    for vote_type in ["proportional"]:
+        if vote_type == "majority":
+            key = key_major
         else:
-            axes.set_title("Low Unbalanced")
-    elif traffic[0] == 22:
-        if traffic[1] == 22:
-            axes.set_title("Medium Balanced")
-        else:
-            axes.set_title("Medium Unbalanced")
-    elif traffic[0] == 32:
-        if traffic[1] == 32:
-            axes.set_title("High Balanced")
-        else:
-            axes.set_title("High Unbalanced")
-
-                    
+            key = key_prop
         
-    fig1.savefig(save_name, format='pdf', bbox_inches='tight')
+        data = all_data[key]
+        names = all_names[key]
+
+        save_name = f"../figs/{traffic[0]}_{traffic[1]}.pdf"
+        print(save_name)
+        # save_name = f"../figs/figure1.pdf"
+
+        fig1, axes = plt.subplots(1,1, subplot_kw={'projection':'polar'})
+
+        variables = ('Speed', 'Stops', 'Wait Time')
+        radar = ComplexRadar(axes, variables, ranges)
+
+        for d, name in zip(data, names):
+            radar.plot(d, label=name)
+            radar.fill(d, alpha=0.2)
+
+        radar.plot(all_data[key_major][2], label="Major S+W")
+        radar.fill(all_data[key_major][2], alpha=0.2)
+
+        fig1.legend()
+
+        if traffic[0] == 11:
+            if traffic[1] == 11:
+                axes.set_title("Low Balanced")
+            else:
+                axes.set_title("Low Unbalanced")
+        elif traffic[0] == 22:
+            if traffic[1] == 22:
+                axes.set_title("Medium Balanced")
+            else:
+                axes.set_title("Medium Unbalanced")
+        elif traffic[0] == 32:
+            if traffic[1] == 32:
+                axes.set_title("High Balanced")
+            else:
+                axes.set_title("High Unbalanced")
+
+
+
+        fig1.savefig(save_name, format='pdf', bbox_inches='tight')
 
 
