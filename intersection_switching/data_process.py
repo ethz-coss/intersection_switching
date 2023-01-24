@@ -94,11 +94,20 @@ for vote_type in vote_modes:
                 avg_total_stops.append(avg_stops)
                 avg_total_speeds.append(avg_speed)
 
+                # if vote == [0.0, 0.5, 0.5]:
+                #     print(traffic[0], traffic[1], "per car")
+                #     print("wait: ", avg_wait, var_wait)
+                #     print("stops: ", avg_stops, var_stops)
 
-            # print(vote, len(avg_total_waits))
-            # print("wait: ", np.mean(avg_total_waits), np.std(avg_total_waits))
-            # print("stops: ", np.mean(avg_total_stops), np.std(avg_total_stops))
-            # print("speeds: ", np.mean(avg_total_speeds), np.std(avg_total_speeds))
+            if vote == [0.0, 0.5, 0.5]:
+                print(vote, traffic[0], traffic[1])
+                print("wait: ", np.mean(avg_total_waits), np.std(avg_total_waits))
+                print("stops: ", np.mean(avg_total_stops), np.std(avg_total_stops))
+                print("speeds: ", np.mean(avg_total_speeds), np.std(avg_total_speeds))
+
+                plt.scatter(avg_total_waits, avg_total_stops)
+                plt.show()
+
 
             result = [np.mean(avg_total_speeds), np.mean(avg_total_stops), np.mean(avg_total_waits)]
             result = [*result, result[0]]

@@ -171,10 +171,25 @@ class SwitchAgent(Agent):
                 return 0
             
     def calculate_reward(self, lanes_count, type='speed'):
-        reward = self.get_reward(type=type)
-        self.total_rewards += [reward]
-        self.reward_count += 1
-        return reward
+
+        if type == 'both':
+            stops = self.get_reward(type='stops') / (5 * len(self.env.vehicles))
+            wait = self.get_reward(type='wait') / 1800
+
+            # reward = stops + wait
+
+            reward = ((-stops)**(0.5) * ((-wait)**(0.5)))
+            reward = -1000*reward
+
+            self.total_rewards += [reward]
+            self.reward_count += 1
+            
+            return reward
+        else:
+            reward = self.get_reward(type=type)
+            self.total_rewards += [reward]
+            self.reward_count += 1
+            return reward
 
     def rescale_preferences(self, pref, qvals):
         alpha = 0.5
