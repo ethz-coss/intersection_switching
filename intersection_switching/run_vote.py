@@ -35,7 +35,7 @@ vote_types = [vote_uniform_3]
 for vote in vote_types:
     for traffic in traffic_conditions:
         for i in range(100):
-            os.system("python runner.py --sim_config '../scenarios/loop_intersection/rings.config' --num_sim_steps 3600 --eps_start 0 --eps_end 0 --lr 0.0005 --mode vote --agents_type learning --num_episodes 1 --replay False --mfd False --n_vehs " + str(traffic[0]) + " " + str(traffic[1]) + " --vote_weights " + str(vote[0]) + " " + str(vote[1]) + " " + str(vote[2]) + " --vote_type majority --path '../runs/proportional_100/'")
+            os.system("python runner.py --sim_config '../scenarios/loop_intersection/rings.config' --num_sim_steps 3600 --eps_start 0 --eps_end 0 --lr 0.0005 --mode vote --agents_type learning --num_episodes 1 --replay False --mfd False --n_vehs " + str(traffic[0]) + " " + str(traffic[1]) + " --vote_weights " + str(vote[0]) + " " + str(vote[1]) + " " + str(vote[2]) + " --vote_type proportional --path '../runs/proportional_100/'")
 
 
         # os.system("sbatch -n 8 --wrap \"python runner.py --sim_config '../scenarios/loop_intersection/rings.config' --num_sim_steps 3600 --eps_start 0 --lr 0.0005 --mode vote --agents_type learning --num_episodes 1 --replay True --mfd False " + " --n_vehs " + str(traffic[0]) + " " + str(traffic[1]) + " --vote_weights " + vote_weights[0] + " " + vote_weights[1] + " " + vote_weights[2] + " " + "\"" )

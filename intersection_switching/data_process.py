@@ -99,14 +99,14 @@ for vote_type in vote_modes:
                 #     print("wait: ", avg_wait, var_wait)
                 #     print("stops: ", avg_stops, var_stops)
 
-            if vote == [0.0, 0.5, 0.5]:
-                print(vote, traffic[0], traffic[1])
-                print("wait: ", np.mean(avg_total_waits), np.std(avg_total_waits))
-                print("stops: ", np.mean(avg_total_stops), np.std(avg_total_stops))
-                print("speeds: ", np.mean(avg_total_speeds), np.std(avg_total_speeds))
+            # if vote == [0.0, 0.5, 0.5]:
+            #     print(vote, traffic[0], traffic[1])
+            #     print("wait: ", np.mean(avg_total_waits), np.std(avg_total_waits))
+            #     print("stops: ", np.mean(avg_total_stops), np.std(avg_total_stops))
+            #     print("speeds: ", np.mean(avg_total_speeds), np.std(avg_total_speeds))
 
-                plt.scatter(avg_total_waits, avg_total_stops)
-                plt.show()
+            #     plt.scatter(avg_total_waits, avg_total_stops)
+            #     plt.show()
 
 
             result = [np.mean(avg_total_speeds), np.mean(avg_total_stops), np.mean(avg_total_waits)]
