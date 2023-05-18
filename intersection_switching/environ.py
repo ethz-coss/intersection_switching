@@ -167,8 +167,11 @@ class Environment(gym.Env):
 
             # required to track distance of periodic trips
             for veh_id, speed in self.veh_speeds.items():
+                new_vehs = []
                 if veh_id not in self.vehicles:
                     self.vehicles[veh_id] = VehicleAgent(self, veh_id) # TODO: remove old vehicles
+                    new_vehs.append(veh_id)
+                    self.assign_driver_preferences(new_vehs, self.pref_types, self.weights)
                 self.vehicles[veh_id].distance += speed
                 self.vehicles[veh_id].speeds.append(speed)
 
@@ -308,6 +311,8 @@ class Environment(gym.Env):
         # return Counter(votes)
         return votes
 
-    def assign_driver_preferences(self, preferences_dict):
+    def assign_driver_preferences(self, vehicle_ids, pref_types, weights):
+        preferences_dict = {id: np.random.choice(pref_types, p=weights) for id in vehicle_ids}
+
         for veh_id, preference in preferences_dict.items():
             self.vehicles[veh_id].preference = preference
