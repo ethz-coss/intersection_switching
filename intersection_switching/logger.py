@@ -37,9 +37,10 @@ class Logger:
         scenario_name = os.path.basename(config_dir)
         if args.n_vehs is None:
             n_vehs = [-1,-1]
+            exp_name = f"{scenario_name}_{args.reward_type}"
         else: 
             n_vehs = args.n_vehs
-        exp_name = f"{n_vehs[0]}_{n_vehs[1]}_{args.reward_type}"
+            exp_name = f"{n_vehs[0]}_{n_vehs[1]}_{args.reward_type}"
 
         if args.load != None or args.load_cluster != None:
             scenario_name += "_load"
