@@ -34,13 +34,14 @@ class SwitchAgent(Agent):
                 self.approach_lanes += self.movements[movement_id].in_lanes
         self.init_phases_vectors()
 
-        n_actions = len(self.phases)
-        nstates = 10
-        self.observation_space = spaces.Box(low=np.zeros(n_actions+nstates), 
-                                            high=np.array([1]*n_actions+[100]*nstates),
+        self.n_actions = len(self.phases)
+        # nstates = 10
+        nstates = len(self.get_vehicle_approach_states({}))
+        self.observation_space = spaces.Box(low=np.zeros(self.n_actions+nstates), 
+                                            high=np.array([1]*self.n_actions+[100]*nstates),
                                             dtype=float)
 
-        self.action_space = spaces.Discrete(n_actions)
+        self.action_space = spaces.Discrete(self.n_actions)
 
     def init_phases_vectors(self):
         """

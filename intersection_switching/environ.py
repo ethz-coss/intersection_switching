@@ -30,10 +30,17 @@ class Environment(gym.Env):
         :param n_actions: the number of possible actions for the learning agent, corresponds to the number of available phases
         :param n_states: the size of the state space for the learning agent
         """
-        sim_config = config_creator(os.path.dirname(os.path.abspath(args.sim_config)), n_vehs=args.n_vehs, reward=reward_type)
-
-        flow_creator(os.path.dirname(os.path.abspath(args.sim_config)), n_vehs=args.n_vehs, reward=reward_type)
         self.n_vehs = args.n_vehs
+
+        if args.n_vehs is not None:
+            print('we are here', args.n_vehs)
+            sim_config = config_creator(os.path.dirname(os.path.abspath(args.sim_config)), n_vehs=args.n_vehs, reward=reward_type)
+            flow_creator(os.path.dirname(os.path.abspath(args.sim_config)), n_vehs=args.n_vehs, reward=reward_type)
+            self.fixed_num_vehicles = True
+        else:
+            self.fixed_num_vehicles = False
+            sim_config = args.sim_config
+
 
         self.eng = cityflow.Engine(sim_config, thread_num=os.cpu_count())
         self.ID = ID
@@ -62,7 +69,9 @@ class Environment(gym.Env):
 
         self.action_freq = 5  # typical update freq for agents
 
-        self.intersection_ids = ['intersection_0_0'] # single intersection only
+        self.intersection_ids = [x for x in self.eng.get_intersection_ids()
+                                if not self.eng.is_intersection_virtual(x)]
+        # self.intersection_ids = ['intersection_0_0'] # single intersection only
         self.intersections = {}
         for intersection_id in self.intersection_ids:
             self.intersections[intersection_id] = SwitchAgent(self, ID=intersection_id,
@@ -105,13 +114,14 @@ class Environment(gym.Env):
     def _warmup(self):
         for _ in range(1000):
             self.eng.next_step()
-            if len(self.eng.get_vehicles())>=sum(self.n_vehs):
-                break
-
+            if self.fixed_num_vehicles:
+                if len(self.eng.get_vehicles())>=sum(self.n_vehs):
+                    break
         veh_dict = self.eng.get_vehicles()
-        if len(veh_dict)<sum(self.n_vehs):
-            print(f'WARNING: {len(veh_dict)}/{sum(self.n_vehs)} vehicles generated. Increase warmup period.')
-            
+        if self.fixed_num_vehicles:
+            if len(veh_dict)<sum(self.n_vehs):
+                print(f'WARNING: {len(veh_dict)}/{sum(self.n_vehs)} vehicles generated. Increase warmup period.')
+        
         self.vehicles = {}
         for veh_id in veh_dict:
             self.vehicles[veh_id] = VehicleAgent(self, veh_id)
@@ -157,6 +167,11 @@ class Environment(gym.Env):
 
             # required to track distance of periodic trips
             for veh_id, speed in self.veh_speeds.items():
+                new_vehs = []
+                if veh_id not in self.vehicles:
+                    self.vehicles[veh_id] = VehicleAgent(self, veh_id) # TODO: remove old vehicles
+                    new_vehs.append(veh_id)
+                    self.assign_driver_preferences(new_vehs, self.pref_types, self.weights)
                 self.vehicles[veh_id].distance += speed
                 self.vehicles[veh_id].speeds.append(speed)
 
@@ -296,6 +311,8 @@ class Environment(gym.Env):
         # return Counter(votes)
         return votes
 
-    def assign_driver_preferences(self, preferences_dict):
+    def assign_driver_preferences(self, vehicle_ids, pref_types, weights):
+        preferences_dict = {id: np.random.choice(pref_types, p=weights) for id in vehicle_ids}
+
         for veh_id, preference in preferences_dict.items():
             self.vehicles[veh_id].preference = preference

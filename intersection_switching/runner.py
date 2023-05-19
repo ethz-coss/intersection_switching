@@ -79,9 +79,9 @@ def parse_args():
                         help="id used for naming")
     parser.add_argument("--gamma", default=0.8, type=float,
                         help="gamma parameter for the DQN")
-    parser.add_argument("--reward_type", default='speed', type=str,
+    parser.add_argument("--reward_type", default='stops', type=str,
                         help="reward function for the agent")
-    parser.add_argument("--n_vehs", default=[11, 5], type=int, nargs=2,
+    parser.add_argument("--n_vehs", default=None, type=int, nargs=2,
                         help="number of vehicles in the scenario")
     parser.add_argument("--vote_weights", default=[1,0, 0 ], type=float, nargs=3,
                         help="number of vehicles in the scenario")
@@ -90,6 +90,33 @@ def parse_args():
 
     return parser.parse_args()
 
+
+def get_vote_action(environ):
+    votes = environ.vote_drivers()
+    actions = {}
+    for agent_id in environ.agent_ids:
+        actprob = np.zeros(environ.act_space.n)
+        raw_net = {}
+        for pref, weight in votes.items():#zip(weights, pref_types):
+            _act = policy_map[pref].act(torch.FloatTensor(
+                obs[agent_id], device=device), 
+                epsilon=environ.eps,
+                as_probs=True)
+            _act = _act.numpy().squeeze()
+            raw_net.update({pref : np.argmax(_act)})
+
+            if args.vote_type=='majority':
+                weight = 1*(weight==np.max(votes.keys())) # zeros out the losing vote
+
+            normed_act = environ._agents_dict[agent_id].rescale_preferences(pref, _act)
+            actprob += weight*normed_act
+            # print(pref, _act, normed_act)
+        act = np.argmax(actprob/sum(votes.values()))
+        raw_net.update({"reference" : act})
+        actions[agent_id] = act
+        # print(np.array(raw_net)==act)
+        logger.objective_alignment.append(raw_net)
+                    
 
 def run_exp(environ, args, num_episodes, num_sim_steps, logger,
             policy, policy_map=None, detailed_log=False):
@@ -120,14 +147,14 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
         print("episode ", i_episode)
 
         obs = environ.reset()
-
         pref_types = ['speed', 'stops', 'wait']
         weights = args.vote_weights
         # preferences_dict = {id: np.random.choice(pref_types) for id in environ.vehicles.keys()}
-        preferences_dict = {id: np.random.choice(pref_types, p=weights) for id in environ.vehicles.keys()}
-
+        environ.pref_types = pref_types
+        environ.weights = weights
+        vehicle_ids = environ.vehicles.keys()
         # preferences_dict = {id: 'speed' for id in environ.vehicles.keys()}
-        environ.assign_driver_preferences(preferences_dict)
+        environ.assign_driver_preferences(vehicle_ids, pref_types, weights)
         while environ.time < num_sim_steps:
             # Dispatch the observations to the model to get the tuple of actions
             # actions = {id: 1*(np.random.random()>0.5) for id in environ.agent_ids} # random policy
@@ -144,7 +171,7 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
                 votes = environ.vote_drivers()
                 actions = {}
                 for agent_id in environ.agent_ids:
-                    actprob = np.zeros(2)
+                    actprob = np.zeros(environ.agents[0].n_actions)
                     raw_net = {}
                     for pref, weight in votes.items():#zip(weights, pref_types):
                         _act = policy_map[pref].act(torch.FloatTensor(
@@ -250,9 +277,13 @@ if __name__ == "__main__":
 
     saved_preferences = ['speed', 'stops', 'wait']
     if args.mode=='vote':
+        if args.n_vehs is None:
+            n_vehs = [-1,-1]
+        else: 
+            n_vehs = args.n_vehs
         policy_map = {}
         for pref in saved_preferences:
-            load_path = f'../saved_models/{args.n_vehs[0]}_{args.n_vehs[1]}_{pref}/reward_target_net.pt'
+            load_path = f'../saved_models/{n_vehs[0]}_{n_vehs[1]}_{pref}/reward_target_net.pt'
             policy_map[pref] = DQN(obs_space, act_space, 
                                    seed=SEED, load=load_path)
     else:
