@@ -32,7 +32,7 @@ vote_quarter_6 = [0, 0.75, 0.25]
 # vote_types = [vote_stops, vote_wait, vote_uniform_1, vote_uniform_2, vote_uniform_3]#, vote_quarter_1, vote_quarter_2, pvote_quarter_3, vote_quarter_4, vote_quarter_5, vote_quarter_6]
 # vote_types = [vote_speed]
 # vote_types = [vote_uniform_3]
-vote_types = [vote_stops, vote_wait]
+vote_types = [vote_stops, vote_wait, vote_uniform_3]
 
 
 sim_config = '../scenarios/2x2/1.config'
@@ -40,7 +40,7 @@ for vote in vote_types:
     vote = [str(i) for i in vote]
     # for traffic in traffic_conditions:
     for i in range(100):
-        call = f"python runner.py --sim_config {sim_config} --num_sim_steps 3600 --eps_start 0 --eps_end 0 --lr 0.0005 --mode vote --agents_type learning --num_episodes 1 --replay False --mfd False  --vote_weights {' '.join(vote)} --vote_type proportional --path '../runs/proportional_100/'"
+        call = f"python3 runner.py --sim_config {sim_config} --num_sim_steps 3600 --eps_start 0 --eps_end 0 --lr 0.0005 --mode vote --agents_type learning --num_episodes 1 --replay False --mfd False  --vote_weights {' '.join(vote)} --vote_type proportional --path '../runs/proportional_100/'"
         os.system(call)
 
 # python runner.py --sim_config ../scenarios/2x2/1.config --num_sim_steps 3600 --eps_start 1 --lr 0.0005 --mode train --agents_type learning --num_episodes 100 --replay True --mfd False --reward_type wait
