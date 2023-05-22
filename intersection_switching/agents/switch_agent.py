@@ -144,7 +144,7 @@ class SwitchAgent(Agent):
         self.update_arr_dep_veh_num(lane_vehs, lanes_count)
         super().apply_action(eng, action, lane_vehs, lanes_count)
 
-    def get_reward(self, type='speed'):
+    def get_reward(self, lanes_count, type='speed'):
         if type=='speed':
             if self.env.speeds[-self.env.stops_idx:]:
                 return np.mean(self.env.speeds[-self.env.stops_idx:])
@@ -170,12 +170,15 @@ class SwitchAgent(Agent):
                 return -np.mean(waiting_times)
             else:
                 return 0
+        if type=='pressure':
+            return -np.abs(np.sum([x.get_pressure(lanes_count) for x in self.movements.values()]))
+
             
     def calculate_reward(self, lanes_count, type='speed'):
 
         if type == 'both':
-            stops = self.get_reward(type='stops') / (5 * len(self.env.vehicles))
-            wait = self.get_reward(type='wait') / 1800
+            stops = self.get_reward(lanes_count, type='stops') / (5 * len(self.env.vehicles))
+            wait = self.get_reward(lanes_count, type='wait') / 1800
 
             # reward = stops + wait
 
@@ -187,7 +190,7 @@ class SwitchAgent(Agent):
             
             return reward
         else:
-            reward = self.get_reward(type=type)
+            reward = self.get_reward(lanes_count, type=type)
             self.total_rewards += [reward]
             self.reward_count += 1
             return reward
