@@ -248,7 +248,7 @@ class Environment(gym.Env):
         self.vehicles = {}
         if self.fixed_num_vehicles:
             self._warmup()
-        self.eng.set_save_replay(True)
+        # self.eng.set_save_replay(True)
 
         self.time = 0
         for agent in self.agents:
