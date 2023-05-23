@@ -7,6 +7,7 @@ from agents.agent import Agent
 
 MAXSPEED = 40/3.6 # NOTE: maxspeed is hardcoded
 WAIT_THRESHOLD = 120
+VEHLENGTH = 5 # meters, hardcoded
 
 class SwitchAgent(Agent):
     """
@@ -20,13 +21,13 @@ class SwitchAgent(Agent):
         """
         super().__init__(env, ID)
 
-        self.clearing_phase = None
-        self.clearing_time = 0
+        # Needed for intersection switch only
+        # self.clearing_phase = None
+        # self.clearing_time = 0
 
         self.in_roads = in_roads
         self.out_roads = out_roads
 
-        self.action_queue = queue.Queue()
         self.agents_type = 'switch'
         self.approach_lanes = []
         for phase in self.phases.values():
@@ -37,6 +38,7 @@ class SwitchAgent(Agent):
         self.n_actions = len(self.phases)
         # nstates = 10
         nstates = len(self.get_vehicle_approach_states({}))
+        # nstates = len(self.get_in_lanes_veh_num({})) + len(self.get_out_lanes_veh_num())
         self.observation_space = spaces.Box(low=np.zeros(self.n_actions+nstates), 
                                             high=np.array([1]*self.n_actions+[100]*nstates),
                                             dtype=float)
@@ -50,7 +52,7 @@ class SwitchAgent(Agent):
         """
         idx = 1
         vec = np.zeros(len(self.phases))
-        # self.clearing_phase.vector = vec.tolist()
+        self.clearing_phase.vector = vec.tolist()
         for phase in self.phases.values():
             vec = np.zeros(len(self.phases))
             if idx != 0:
@@ -60,22 +62,22 @@ class SwitchAgent(Agent):
 
     def observe(self, vehs_distance):
         observations = self.phase.vector + self.get_vehicle_approach_states(vehs_distance)
+        # observations = self.phase.vector + self.get_in_lanes_veh_num(
+        #     vehs_distance) + self.get_out_lanes_veh_num()
         return np.array(observations)
 
     def get_vehicle_approach_states(self, vehs_distance):
-        ROADLENGTH = 300 # meters, hardcoded
-        VEHLENGTH = 5 # meters, hardcoded
-
         lane_vehicles = self.env.lane_vehs
         state_vec = []
         for lane_id in self.approach_lanes:
+            length = self.in_lanes_length[lane_id]
             speeds = []
             waiting_times = []
             for veh_id in lane_vehicles[lane_id]:
                 vehicle = self.env.vehicles[veh_id]
                 speeds.append(self.env.veh_speeds[veh_id])
                 waiting_times.append(vehicle.wait)
-            density = len(lane_vehicles[lane_id]) * VEHLENGTH / ROADLENGTH
+            density = len(lane_vehicles[lane_id]) * VEHLENGTH / length
             ave_speed = np.mean(speeds or 0)
             ave_wait = np.mean(waiting_times or 0)
             # state_vec += [density]
@@ -85,6 +87,22 @@ class SwitchAgent(Agent):
         return state_vec + density
         # return density
 
+    def get_out_lanes_veh_num(self):
+        """
+        gets the number of vehicles on the outgoing lanes of the intersection
+        :param eng: the cityflow simulation engine
+        :param lanes_count: a dictionary with lane ids as keys and vehicle count as values
+        """
+        lanes_count = self.env.lanes_count
+        lanes_veh_num = []
+        for road in self.out_roads:
+            lanes = self.env.eng.get_road_lanes(road)
+            for lane in lanes:
+                length = self.out_lanes_length[lane]
+                lanes_veh_num.append(lanes_count[lane] * VEHLENGTH / length)
+                # lanes_veh_num.append(lanes_count[lane])
+        return lanes_veh_num
+    
     def get_in_lanes_veh_num(self, vehs_distance):
         """
         gets the number of vehicles on the incoming lanes of the intersection
@@ -92,8 +110,6 @@ class SwitchAgent(Agent):
         :param lanes_veh: a dictionary with lane ids as keys and list of vehicle ids as values
         :param vehs_distance: dictionary with vehicle ids as keys and their distance on their current lane as value
         """
-        ROADLENGTH = 300 # meters, hardcoded
-        VEHLENGTH = 5 # meters, hardcoded
         
         lane_vehs = self.env.lane_vehs
         lanes_count = self.env.lanes_count
@@ -101,22 +117,23 @@ class SwitchAgent(Agent):
         for road in self.in_roads:
             lanes = self.env.eng.get_road_lanes(road)
             for lane in lanes:
+                length = self.in_lanes_length[lane]
                 seg1 = 0
                 seg2 = 0
                 seg3 = 0
                 vehs = lane_vehs[lane]
                 for veh in vehs:
                     if veh in vehs_distance.keys():
-                        if vehs_distance[veh] / ROADLENGTH >= (2/3):
+                        if vehs_distance[veh] / length >= (2/3):
                             seg1 += 1
-                        elif vehs_distance[veh] / ROADLENGTH >= (1/3):
+                        elif vehs_distance[veh] / length >= (1/3):
                             seg2 += 1
                         else:
                             seg3 += 1
 
-                lanes_veh_num.append((seg1 * VEHLENGTH) / (ROADLENGTH/3))
-                lanes_veh_num.append((seg2 * VEHLENGTH) / (ROADLENGTH/3))
-                lanes_veh_num.append((seg3 * VEHLENGTH) / (ROADLENGTH/3))
+                lanes_veh_num.append((seg1 * VEHLENGTH) / (length/3))
+                lanes_veh_num.append((seg2 * VEHLENGTH) / (length/3))
+                lanes_veh_num.append((seg3 * VEHLENGTH) / (length/3))
         return lanes_veh_num
 
     
@@ -134,10 +151,10 @@ class SwitchAgent(Agent):
         return max(choices, key=choices.get)
 
 
-    def switch(self, eng, lane_vehs, lanes_count):
-        curr_phase = self.phase.ID
-        action = abs(curr_phase-1) # ID zero is clearing
-        super().apply_action(eng, action, lane_vehs, lanes_count)
+    # def switch(self, eng, lane_vehs, lanes_count):
+    #     curr_phase = self.phase.ID
+    #     action = abs(curr_phase-1) # ID zero is clearing
+    #     super().apply_action(eng, action, lane_vehs, lanes_count)
 
     def apply_action(self, eng, phase_id, lane_vehs, lanes_count):
         action = phase_id

@@ -160,11 +160,17 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
             # actions = {id: 1*(np.random.random()>0.5) for id in environ.agent_ids} # random policy
 
             if args.mode == 'train' and environ.agents_type in ['learning']:
-                actions = {}
+                # actions = {}
+                actions = environ.actions  # .copy()
+
                 for agent_id in environ.agent_ids:
-                    act = policy.act(torch.FloatTensor(
-                        obs[agent_id], device=device), epsilon=environ.eps)
-                    actions[agent_id] = act
+                    tl = environ.intersections[agent_id]
+                    act = None
+                    if tl.time_to_act:
+                        act = policy.act(torch.FloatTensor(
+                            obs[agent_id], device=device), epsilon=environ.eps)
+                    if act is not None:
+                        actions[agent_id] = act
 
 
             if args.mode=='vote':
@@ -200,10 +206,11 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
 
             # Update the model with the transitions observed by each agent
             
-            if args.mode=='train' and environ.agents_type in ['learning']:
+            if args.mode=='train' and environ.agents_type in ['learning'] and environ.time > 50:
                 step = (step+1) % environ.update_freq
-                if environ.time > 50:
-                    for agent_id in rewards.keys():
+                for agent_id in rewards.keys():
+                    if rewards[agent_id]:
+                        # print(rewards, actions, obs)
                         state = torch.FloatTensor(obs[agent_id], device=device)
                         reward = torch.tensor(
                             [rewards[agent_id]], dtype=torch.float, device=device)
@@ -278,12 +285,12 @@ if __name__ == "__main__":
     saved_preferences = ['speed', 'stops', 'wait']
     if args.mode=='vote':
         if args.n_vehs is None:
-            n_vehs = [-1,-1]
+            n_vehs = None
         else: 
             n_vehs = args.n_vehs
         policy_map = {}
         for pref in saved_preferences:
-            load_path = f'../saved_models/{n_vehs[0]}_{n_vehs[1]}_{pref}/reward_target_net.pt'
+            load_path = f'../saved_models/{logger.scenario_name}_{pref}/reward_target_net.pt'
             policy_map[pref] = DQN(obs_space, act_space, 
                                    seed=SEED, load=load_path)
     else:

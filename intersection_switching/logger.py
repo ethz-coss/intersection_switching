@@ -36,7 +36,7 @@ class Logger:
         config_dir, config_file = os.path.split(args.sim_config)
         scenario_name = os.path.basename(config_dir)
         if args.n_vehs is None:
-            n_vehs = [-1,-1]
+            n_vehs = None
             exp_name = f"{scenario_name}_{args.reward_type}"
         else: 
             n_vehs = args.n_vehs
@@ -46,7 +46,7 @@ class Logger:
             scenario_name += "_load"
 
         if args.mode == 'vote':
-            exp_name =  f"{n_vehs[0]}_{n_vehs[1]}_{args.vote_weights[0]}_{args.vote_weights[1]}_{args.vote_weights[2]}"
+            exp_name =  f"{'_'.join(n_vehs) if n_vehs is not None else scenario_name}_{'_'.join(args.vote_weights)}"
             self.log_path = os.path.join(args.path, exp_name)
         elif args.mode == 'train':
             self.log_path = os.path.join("../saved_models", exp_name)
@@ -62,6 +62,7 @@ class Logger:
                 i += 1
         print(f'saving to {self.log_path}')
         os.makedirs(self.log_path)
+        self.scenario_name = scenario_name
 
     def log_measures(self, environ):
         """

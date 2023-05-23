@@ -23,6 +23,7 @@ class Agent:
         self.total_rewards = []
         self.reward_count = 0
 
+        # self.phase = None
 
         # self.next_act_time = env.action_freq
         self.next_act_time = 0
@@ -122,7 +123,6 @@ class Agent:
             for move in phase.movements:
                 if phase.ID not in self.movements[move].phases:
                     self.movements[move].phases.append(phase.ID)
-
 
     def set_phase(self, eng, phase):
         """

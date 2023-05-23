@@ -55,8 +55,10 @@ class Environment(gym.Env):
 
         self.eps = self.eps_start
         self.reward_type = reward_type
-
-        self._warmup()
+            
+        self.vehicles = {}
+        if self.fixed_num_vehicles:
+            self._warmup()
 
         self.time = 0
         random.seed()
@@ -67,7 +69,7 @@ class Environment(gym.Env):
 
         self.agents_type = args.agents_type
 
-        self.action_freq = 5  # typical update freq for agents
+        self.action_freq = 10  # typical update freq for agents
 
         self.intersection_ids = [x for x in self.eng.get_intersection_ids()
                                 if not self.eng.is_intersection_virtual(x)]
@@ -122,7 +124,6 @@ class Environment(gym.Env):
             if len(veh_dict)<sum(self.n_vehs):
                 print(f'WARNING: {len(veh_dict)}/{sum(self.n_vehs)} vehicles generated. Increase warmup period.')
         
-        self.vehicles = {}
         for veh_id in veh_dict:
             self.vehicles[veh_id] = VehicleAgent(self, veh_id)
 
@@ -204,20 +205,18 @@ class Environment(gym.Env):
                     time_to_act = True
 
     def _apply_actions(self, actions):
-        for intersection in self.intersections.values():
-            # lane_vehicles = self.eng.get_lane_vehicles()
-            # votes = []
-            # for lane_id in intersection.approach_lanes:
-            #     for veh_id in lane_vehicles[lane_id]:
-            #         votes.append(self.vehicles[veh_id].get_vote())
-            intersection.apply_action(self.eng, actions[intersection.ID],
-                                   self.lane_vehs, self.lanes_count)
+        for tl_id, action in actions.items():
+            intersection = self._agents_dict[tl_id]
+            if intersection.time_to_act:
+                intersection.apply_action(self.eng, action,
+                                    self.lane_vehs, self.lanes_count)
 
     def _get_obs(self):
         vehs_distance = self.eng.get_vehicle_distance()
 
-        self.observations = {tl.ID: tl.observe(vehs_distance) for tl in self.intersections.values()}
-        return self.observations
+        self.observations.update({tl.ID: tl.observe(
+            vehs_distance) for tl in self.intersections.values() if tl.time_to_act})
+        return self.observations.copy()
 
     def _compute_dones(self):
         dones = {ts_id: False for ts_id in self.intersection_ids}
@@ -225,8 +224,8 @@ class Environment(gym.Env):
         return dones
 
     def _compute_rewards(self):
-        self.rewards = {tl.ID: tl.calculate_reward(self.lanes_count, type=self.reward_type) for tl in self.intersections.values()}
-        return self.rewards
+        self.rewards.update({tl.ID: tl.calculate_reward(self.lanes_count, type=self.reward_type) for tl in self.intersections.values() if tl.time_to_act})
+        return {ts: self.rewards[ts] for ts in self.rewards.keys() if self.intersections[ts].time_to_act}
 
     def observe(self, agent):
         """
@@ -246,7 +245,9 @@ class Environment(gym.Env):
         self.eng.reset(seed=False)
         self.eng.set_random_seed(seed)
 
-        self._warmup()
+        self.vehicles = {}
+        if self.fixed_num_vehicles:
+            self._warmup()
         self.eng.set_save_replay(True)
 
         self.time = 0
