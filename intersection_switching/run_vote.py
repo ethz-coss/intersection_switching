@@ -34,14 +34,19 @@ vote_quarter_6 = [0, 0.75, 0.25]
 # vote_types = [vote_uniform_3]
 vote_types = [vote_stops, vote_wait, vote_uniform_3]
 
+configs = ['../scenarios/hangzhou/1.config',
+           '../scenarios/ny16/1.config']
+for sim_config in configs:
+    for vote in vote_types:
+        vote = [str(i) for i in vote]
+        # for traffic in traffic_conditions:
+        calls = []
+        for i in range(1):
+            call = f"python runner.py --sim_config {sim_config} --num_sim_steps 3600 --eps_start 0 --eps_end 0 --lr 0.0005 --mode vote --agents_type learning --num_episodes 1 --replay False --mfd False  --vote_weights {' '.join(vote)} --vote_type proportional --path '../runs/proportional/'"
+            calls.append(call)
 
-sim_config = '../scenarios/2x2/1.config'
-for vote in vote_types:
-    vote = [str(i) for i in vote]
-    # for traffic in traffic_conditions:
-    for i in range(100):
-        call = f"python3 runner.py --sim_config {sim_config} --num_sim_steps 3600 --eps_start 0 --eps_end 0 --lr 0.0005 --mode vote --agents_type learning --num_episodes 1 --replay False --mfd False  --vote_weights {' '.join(vote)} --vote_type proportional --path '../runs/proportional_100/'"
-        os.system(call)
+        pycalls = "\n".join(calls)
+        os.system(f"""sbatch -n 8 --wrap '{pycalls}'""")
 
 # python runner.py --sim_config ../scenarios/2x2/1.config --num_sim_steps 3600 --eps_start 1 --lr 0.0005 --mode train --agents_type learning --num_episodes 100 --replay True --mfd False --reward_type wait
         # os.system("sbatch -n 8 --wrap \"python runner.py --sim_config '../scenarios/loop_intersection/rings.config' --num_sim_steps 3600 --eps_start 0 --lr 0.0005 --mode vote --agents_type learning --num_episodes 1 --replay True --mfd False " + " --n_vehs " + str(traffic[0]) + " " + str(traffic[1]) + " --vote_weights " + vote_weights[0] + " " + vote_weights[1] + " " + vote_weights[2] + " " + "\"" )
