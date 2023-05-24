@@ -286,6 +286,7 @@ if __name__ == "__main__":
     policies = [policy]
 
     saved_preferences = ['speed', 'stops', 'wait']
+    ignored_prefs = ['speed']
     if args.mode=='vote':
         if args.n_vehs is None:
             n_vehs = None
@@ -294,6 +295,8 @@ if __name__ == "__main__":
         policy_map = {}
         for pref in saved_preferences:
             load_path = f'../saved_models/{logger.scenario_name}_{pref}/reward_target_net.pt'
+            if pref in ignored_prefs:
+                load_path = None
             policy_map[pref] = DQN(obs_space, act_space, 
                                    seed=SEED, load=load_path)
     else:
