@@ -83,10 +83,13 @@ def parse_args():
                         help="reward function for the agent")
     parser.add_argument("--n_vehs", default=None, type=int, nargs=2,
                         help="number of vehicles in the scenario")
-    parser.add_argument("--vote_weights", default=[1,0, 0 ], type=float, nargs=3,
-                        help="number of vehicles in the scenario")
     parser.add_argument("--vote_type", default='proportional', type=str,
                         help="type of voting used")
+    parser.add_argument("--total_points", default=10, type=int,
+                        help="Total points to distribute among preferences")
+    parser.add_argument("--scenario", default=1, type=int,
+                        help="The scenario number defining point distributions")
+
 
     return parser.parse_args()
 
@@ -298,7 +301,6 @@ if __name__ == "__main__":
 
     num_episodes = args.num_episodes
     num_sim_steps = args.num_sim_steps
-
 
     detailed_log = args.mode == 'test'
     run_exp(environ, args, num_episodes, num_sim_steps, logger, policies[0], policy_map, detailed_log)
