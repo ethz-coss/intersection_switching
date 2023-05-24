@@ -151,13 +151,15 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
 
         obs = environ.reset()
         pref_types = ['speed', 'stops', 'wait']
-        weights = args.vote_weights
+        # weights = args.vote_weights
         # preferences_dict = {id: np.random.choice(pref_types) for id in environ.vehicles.keys()}
         environ.pref_types = pref_types
-        environ.weights = weights
+        # environ.weights = weights
         vehicle_ids = environ.vehicles.keys()
         # preferences_dict = {id: 'speed' for id in environ.vehicles.keys()}
-        environ.assign_driver_preferences(vehicle_ids, pref_types, weights)
+        # environ.assign_driver_preferences(vehicle_ids, pref_types, weights)
+        environ.assign_driver_preferences(vehicle_ids, pref_types, args.total_points, args.scenario)
+
         while environ.time < num_sim_steps:
             # Dispatch the observations to the model to get the tuple of actions
             # actions = {id: 1*(np.random.random()>0.5) for id in environ.agent_ids} # random policy
