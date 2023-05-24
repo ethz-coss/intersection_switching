@@ -25,7 +25,7 @@ import os
 # vote_quarter_5 = [0.25, 0.75, 0]
 # vote_quarter_6 = [0, 0.75, 0.25]
 
-scenarios = ['bipolar_preference_distribution', 'balanced_mild', 'majority_minority_mild', 'extreme_majority_minority']  # 4 scenarios
+scenarios = ['bipolar', 'balanced_mild', 'majority_mild', 'majority_extreme']  # 4 scenarios
 
 configs = ['../scenarios/hangzhou/1.config', '../scenarios/ny16/1.config', '../scenarios/2x2/1.config']
 total_points = 10

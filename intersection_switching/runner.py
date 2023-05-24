@@ -87,8 +87,8 @@ def parse_args():
                         help="type of voting used")
     parser.add_argument("--total_points", default=10, type=int,
                         help="Total points to distribute among preferences")
-    parser.add_argument("--scenario", default=1, type=int,
-                        help="The scenario number defining point distributions")
+    parser.add_argument("--scenario", default='bipolar', type=str,
+                        help="The scenario defining point distributions")
 
 
     return parser.parse_args()

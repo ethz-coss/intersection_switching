@@ -306,7 +306,6 @@ class Environment(gym.Env):
 
         for i, veh_id in enumerate(vehicle_ids):
             if scenario == 'bipolar':  # Bipolar Preference Distribution
-                # Half the members have a strong bias towards one option, while the other half does not show a strong bias towards any particular option.
                 if i < len(vehicle_ids) / 2:
                     stop_points = np.random.uniform(0.7, 0.9) * total_points
                     points = [int(stop_points), total_points - int(stop_points)]
@@ -321,7 +320,7 @@ class Environment(gym.Env):
                     wait_points = np.random.uniform(0.45, 0.55) * total_points
                     points = [total_points - int(wait_points), int(wait_points)]
 
-            elif scenario == 'majority_minority_mild':  # Majority-Minority Mild Polarization
+            elif scenario == 'majority_mild':  # Majority-Minority Mild Polarization
                 if i < len(vehicle_ids) * 0.6:
                     stop_points = np.random.uniform(0.45, 0.55) * total_points
                     points = [int(stop_points), total_points - int(stop_points)]
@@ -329,7 +328,7 @@ class Environment(gym.Env):
                     wait_points = np.random.uniform(0.45, 0.55) * total_points
                     points = [total_points - int(wait_points), int(wait_points)]
 
-            elif scenario == 'extreme_majority_minority':  # Extreme Majority-Minority Polarization
+            elif scenario == 'majority_extreme':  # Extreme Majority-Minority Polarization
                 if i < len(vehicle_ids) * 0.1:
                     stop_points = np.random.uniform(0.9, 1.0) * total_points
                     points = [int(stop_points), total_points - int(stop_points)]
