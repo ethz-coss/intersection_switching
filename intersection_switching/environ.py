@@ -174,7 +174,10 @@ class Environment(gym.Env):
                 if veh_id not in self.vehicles:
                     self.vehicles[veh_id] = VehicleAgent(self, veh_id) # TODO: remove old vehicles
                     new_vehs.append(veh_id)
-                    self.assign_driver_preferences(new_vehs, self.pref_types, self.total_points, self.scenario)
+                    if self.weights is not None:
+                        self.assign_driver_preferences(new_vehs, self.pref_types, weights=self.weights)
+                    else:
+                        self.assign_driver_preferences(new_vehs, self.pref_types, total_points=self.total_points, scenario=self.scenario)
                 self.vehicles[veh_id].distance += speed
                 self.vehicles[veh_id].speeds.append(speed)
 
@@ -356,7 +359,7 @@ class Environment(gym.Env):
                         votes[self.vehicles[veh_id].preference] += 1
         return votes
 
-    def assign_driver_preferences(self, vehicle_ids, pref_types, weights, total_points=None, scenario=None):
+    def assign_driver_preferences(self, vehicle_ids, pref_types, weights=None, total_points=None, scenario=None):
         if total_points and scenario:  # If point-based preference is enabled
             preferences_dict = self.distribute_points(vehicle_ids, pref_types, total_points, scenario)
         else:

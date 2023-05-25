@@ -33,14 +33,14 @@ scenarios = {
 }
 
 input_methods = ['binary', 'cumulative']
-configs = ['../scenarios/hangzhou/1.config', '../scenarios/ny16/1.config', '../scenarios/2x2/1.config']
+configs = ['../scenarios/hangzhou/1.config', '../scenarios/ny16/1.config']
 total_points = 10
 
 for sim_config in configs:
     for scenario, weights in scenarios.items():
         for input_method in input_methods:
             calls = []
-            for i in range(1):
+            for i in range(100):
                 if input_method == 'binary':
                     vote_weights = " ".join(str(x) for x in weights)
                     call = f"python runner.py --sim_config {sim_config} --num_sim_steps 3600 --eps_start 0 --eps_end 0 --lr 0.0005 --mode vote --agents_type learning --num_episodes 1 --vote_weights {vote_weights} --replay False --mfd False --path '../runs/proportional/'"

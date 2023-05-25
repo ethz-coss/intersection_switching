@@ -154,17 +154,17 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
         obs = environ.reset()
         pref_types = ['speed', 'stops', 'wait']
         weights = args.vote_weights
+        environ.weights = weights
         total_points = args.total_points  # ensure this is defined in your scope
         scenario = args.scenario  # ensure this is defined in your scope
         environ.pref_types = pref_types
-        # environ.weights = weights
         vehicle_ids = environ.vehicles.keys()
 
         # Assign driver preferences
         if weights is not None:
-            environ.assign_driver_preferences(vehicle_ids, pref_types, weights)
+            environ.assign_driver_preferences(vehicle_ids, pref_types, weights=weights)
         else:
-            environ.assign_driver_preferences(vehicle_ids, pref_types, weights, total_points, scenario)
+            environ.assign_driver_preferences(vehicle_ids, pref_types, total_points=total_points, scenario=scenario)
 
         while environ.time < num_sim_steps:
             # Dispatch the observations to the model to get the tuple of actions

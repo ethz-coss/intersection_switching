@@ -46,8 +46,8 @@ class Logger:
             scenario_name += "_load"
 
         if args.mode == 'vote':
-            # exp_name =  f"{'_'.join(n_vehs) if n_vehs is not None else scenario_name}_{'_'.join(args.vote_weights)}"
-            exp_name =  f"{'_'.join(map(str,n_vehs)) if n_vehs is not None else scenario_name}_{'_'.join(map(str,args.vote_weights))}"
+            # exp_name =  f"{'_'.join(map(str,n_vehs)) if n_vehs is not None else scenario_name}_{'_'.join(map(str,args.vote_weights))}"
+            exp_name =  f"{'_'.join(map(str,n_vehs)) if n_vehs is not None else scenario_name}_{args.scenario}"
             self.log_path = os.path.join(args.path, exp_name)
         elif args.mode == 'train':
             self.log_path = os.path.join("../saved_models", exp_name)
