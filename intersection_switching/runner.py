@@ -83,11 +83,13 @@ def parse_args():
                         help="reward function for the agent")
     parser.add_argument("--n_vehs", default=None, type=int, nargs=2,
                         help="number of vehicles in the scenario")
+    parser.add_argument("--vote_weights", default=None, type=float, nargs=3,
+                        help="number of vehicles in the scenario")
     parser.add_argument("--vote_type", default='proportional', type=str,
                         help="type of voting used")
     parser.add_argument("--total_points", default=10, type=int,
                         help="Total points to distribute among preferences")
-    parser.add_argument("--scenario", default='bipolar', type=str,
+    parser.add_argument("--scenario", default=None, type=str,
                         help="The scenario defining point distributions")
 
 
@@ -152,12 +154,18 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
         obs = environ.reset()
         pref_types = ['speed', 'stops', 'wait']
         weights = args.vote_weights
-        # preferences_dict = {id: np.random.choice(pref_types) for id in environ.vehicles.keys()}
+        total_points = args.total_points  # ensure this is defined in your scope
+        scenario = args.scenario  # ensure this is defined in your scope
         environ.pref_types = pref_types
         environ.weights = weights
         vehicle_ids = environ.vehicles.keys()
-        # preferences_dict = {id: 'speed' for id in environ.vehicles.keys()}
-        environ.assign_driver_preferences(vehicle_ids, pref_types, weights)
+
+        # Assign driver preferences
+        if weights is not None:
+            environ.assign_driver_preferences(vehicle_ids, pref_types, weights)
+        else:
+            environ.assign_driver_preferences(vehicle_ids, pref_types, weights, total_points, scenario)
+
         while environ.time < num_sim_steps:
             # Dispatch the observations to the model to get the tuple of actions
             # actions = {id: 1*(np.random.random()>0.5) for id in environ.agent_ids} # random policy
@@ -177,7 +185,8 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
 
 
             if args.mode=='vote':
-                votes = environ.vote_drivers()
+                point_voting = args.vote_weights is None
+                votes = environ.vote_drivers(point_voting)
                 actions = {}
                 for agent_id in environ.agent_ids:
                     actprob = np.zeros(environ.agents[0].n_actions)
