@@ -49,4 +49,4 @@ for sim_config in configs:
                 calls.append(call)
 
             pycalls = "\n".join(calls)
-            os.system(f"""sbatch -n 8 --wrap '{pycalls}'""")
+            os.system(f"""sbatch -n 8  --time=8:00:00 --wrap '{pycalls}'""")
