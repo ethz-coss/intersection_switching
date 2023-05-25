@@ -104,7 +104,7 @@ def get_vote_action(environ):
         raw_net = {}
         for pref, weight in votes.items():#zip(weights, pref_types):
             _act = policy_map[pref].act(torch.FloatTensor(
-                obs[agent_id], device=device), 
+                obs[agent_id], device=device),
                 epsilon=environ.eps,
                 as_probs=True)
             _act = _act.numpy().squeeze()
@@ -121,7 +121,7 @@ def get_vote_action(environ):
         actions[agent_id] = act
         # print(np.array(raw_net)==act)
         logger.objective_alignment.append(raw_net)
-                    
+
 
 def run_exp(environ, args, num_episodes, num_sim_steps, logger,
             policy, policy_map=None, detailed_log=False):
@@ -157,7 +157,7 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
         total_points = args.total_points  # ensure this is defined in your scope
         scenario = args.scenario  # ensure this is defined in your scope
         environ.pref_types = pref_types
-        environ.weights = weights
+        # environ.weights = weights
         vehicle_ids = environ.vehicles.keys()
 
         # Assign driver preferences
@@ -193,7 +193,7 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
                     raw_net = {}
                     for pref, weight in votes.items():#zip(weights, pref_types):
                         _act = policy_map[pref].act(torch.FloatTensor(
-                            obs[agent_id], device=device), 
+                            obs[agent_id], device=device),
                             epsilon=environ.eps,
                             as_probs=True)
                         _act = _act.numpy().squeeze()
@@ -210,14 +210,14 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
                     actions[agent_id] = act
                     # print(np.array(raw_net)==act)
                     logger.objective_alignment.append(raw_net)
-                    
+
 
             # Execute the actions
             next_obs, rewards, dones, info = environ.step(actions)
             # print(next_obs, rewards)
 
             # Update the model with the transitions observed by each agent
-            
+
             if args.mode=='train' and environ.agents_type in ['learning'] and environ.time > 50:
                 step = (step+1) % environ.update_freq
                 for agent_id in rewards.keys():
@@ -299,14 +299,14 @@ if __name__ == "__main__":
     if args.mode=='vote':
         if args.n_vehs is None:
             n_vehs = None
-        else: 
+        else:
             n_vehs = args.n_vehs
         policy_map = {}
         for pref in saved_preferences:
             load_path = f'../saved_models/{logger.scenario_name}_{pref}/reward_target_net.pt'
             if pref in ignored_prefs:
                 load_path = None
-            policy_map[pref] = DQN(obs_space, act_space, 
+            policy_map[pref] = DQN(obs_space, act_space,
                                    seed=SEED, load=load_path)
     else:
         policy_map=None
@@ -316,4 +316,3 @@ if __name__ == "__main__":
 
     detailed_log = args.mode == 'test'
     run_exp(environ, args, num_episodes, num_sim_steps, logger, policies[0], policy_map, detailed_log)
-
