@@ -190,8 +190,8 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
                 actions = {}
                 for agent_id in environ.agent_ids:
                     actprob = np.zeros(environ.agents[0].n_actions)
-                    raw_net = {}
-                    for pref, weight in votes.items():#zip(weights, pref_types):
+                    raw_net = {"agent_id": agent_id}
+                    for pref, weight in votes[agent_id].items():#zip(weights, pref_types):
                         _act = policy_map[pref].act(torch.FloatTensor(
                             obs[agent_id], device=device),
                             epsilon=environ.eps,
@@ -200,12 +200,12 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
                         raw_net.update({pref : np.argmax(_act)})
 
                         if args.vote_type=='majority':
-                            weight = 1*(weight==np.max(list(votes.values()))) # zeros out the losing vote
+                            weight = 1*(weight==np.max(list(votes[agent_id].values()))) # zeros out the losing vote
 
                         normed_act = environ._agents_dict[agent_id].rescale_preferences(pref, _act)
                         actprob += weight*normed_act
                         # print(pref, _act, normed_act)
-                    act = np.argmax(actprob/sum(votes.values()))
+                    act = np.argmax(actprob/sum(votes[agent_id].values()))
                     raw_net.update({"reference" : act})
                     actions[agent_id] = act
                     # print(np.array(raw_net)==act)

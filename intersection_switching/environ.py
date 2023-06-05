@@ -345,18 +345,18 @@ class Environment(gym.Env):
         return preferences_dict
 
     def vote_drivers(self, point_voting=False):
-        votes = {'speed': 0, 'wait': 0, 'stops': 0}
+        votes = {tl_id: {'speed': 0, 'wait': 0, 'stops': 0} for tl_id, tl in self.intersections.items()}
 
-        for intersection in self.intersections.values():
-            lane_vehicles = self.eng.get_lane_vehicles()
+        lane_vehicles = self.eng.get_lane_vehicles()
+        for tl_id, intersection in self.intersections.items():
             for lane_id in intersection.approach_lanes:
                 for veh_id in lane_vehicles[lane_id]:
                     if point_voting:
                         # Sum up the scores based on the preferences of the vehicles.
                         for pref_type, points in self.vehicles[veh_id].preference.items():
-                            votes[pref_type] += points
+                            votes[tl_id][pref_type] += points
                     else:
-                        votes[self.vehicles[veh_id].preference] += 1
+                        votes[tl_id][self.vehicles[veh_id].preference] += 1
         return votes
 
     def assign_driver_preferences(self, vehicle_ids, pref_types, weights=None, total_points=None, scenario=None):
