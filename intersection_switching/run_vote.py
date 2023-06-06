@@ -26,27 +26,38 @@ import os
 # vote_quarter_6 = [0, 0.75, 0.25]
 
 scenarios = {
+    # 'stops': [0, 1, 0],
+    # 'waits': [0, 0, 1],
     'bipolar': [0, 0.5, 0.5],
     'balanced_mild': [0, 0.5, 0.5],
     'majority_mild': [0, 0.6, 0.4],
     'majority_extreme': [0, 0.2, 0.8],
 }
 
+pure_methods = ['stops', 'waits']
+
 input_methods = ['binary', 'cumulative']
 configs = ['../scenarios/hangzhou/1.config', '../scenarios/ny16/1.config']
+vote_types = ['proportional', 'majority']
+
 total_points = 10
+sim_steps = 3600
+trials = 50
 
-for sim_config in configs:
-    for scenario, weights in scenarios.items():
-        for input_method in input_methods:
-            calls = []
-            for i in range(100):
-                if input_method == 'binary':
-                    vote_weights = " ".join(str(x) for x in weights)
-                    call = f"python runner.py --sim_config {sim_config} --num_sim_steps 3600 --eps_start 0 --eps_end 0 --lr 0.0005 --mode vote --agents_type learning --num_episodes 1 --vote_weights {vote_weights} --replay False --mfd False --path '../runs/proportional/'"
-                else:  # cumulative voting
-                    call = f"python runner.py --sim_config {sim_config} --num_sim_steps 3600 --eps_start 0 --eps_end 0 --lr 0.0005 --mode vote --agents_type learning --num_episodes 1  --replay False --mfd False --total_points {total_points} --scenario {scenario} --path '../runs/proportional/'"
-                calls.append(call)
+if __name__=='__main__':
+    for sim_config in configs:
+        for scenario, weights in scenarios.items():
+            for input_method in input_methods:
+                for vote_type in vote_types:
+                    calls = []
+                    for i in range(trials):
+                        if input_method=='binary':
+                        # if scenario in pure_methods:
+                            vote_weights = " ".join(str(x) for x in weights)
+                            call = f"python runner.py --sim_config {sim_config} --num_sim_steps {sim_steps} --eps_start 0 --eps_end 0 --lr 0.0005 --mode vote --agents_type learning --num_episodes 1 --vote_weights {vote_weights} --replay False --mfd False --scenario {scenario} --vote_type {vote_type} --path '../runs/{vote_type}/{input_method}/'"
+                        else:  # cumulative voting
+                            call = f"python runner.py --sim_config {sim_config} --num_sim_steps {sim_steps} --eps_start 0 --eps_end 0 --lr 0.0005 --mode vote --agents_type learning --num_episodes 1  --replay False --mfd False --total_points {total_points} --scenario {scenario} --vote_type {vote_type} --path '../runs/{vote_type}/{input_method}/'"
+                        calls.append(call)
 
-            pycalls = "\n".join(calls)
-            os.system(f"""sbatch -n 8  --time=8:00:00 --wrap '{pycalls}'""")
+                    pycalls = "\n".join(calls)
+                    os.system(f"""sbatch -n 8  --time=8:00:00 --wrap '{pycalls}'""")
