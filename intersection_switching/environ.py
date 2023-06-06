@@ -311,33 +311,33 @@ class Environment(gym.Env):
             if scenario == 'bipolar':  # Bipolar Preference Distribution
                 if i < len(vehicle_ids) / 2:
                     stop_points = random.normalvariate(0.8, 0.05) * total_points
-                    points = [int(stop_points), total_points - int(stop_points)]
+                    points = [0, int(stop_points), total_points - int(stop_points)]
                 else:
                     points = np.random.multinomial(total_points, np.ones(len(pref_types)) / len(pref_types))
 
             elif scenario == 'balanced_mild':  # Balanced Mild Polarization
                 if i < len(vehicle_ids) / 2:
                     stop_points = random.normalvariate(0.6, 0.05) * total_points
-                    points = [int(stop_points), total_points - int(stop_points)]
+                    points = [0, int(stop_points), total_points - int(stop_points)]
                 else:
                     wait_points = random.normalvariate(0.6, 0.05) * total_points
-                    points = [total_points - int(wait_points), int(wait_points)]
+                    points = [0, total_points - int(wait_points), int(wait_points)]
 
             elif scenario == 'majority_mild':  # Majority-Minority Mild Polarization
                 if i < len(vehicle_ids) * 0.6:
                     stop_points = random.normalvariate(0.6, 0.05) * total_points
-                    points = [int(stop_points), total_points - int(stop_points)]
+                    points = [0, int(stop_points), total_points - int(stop_points)]
                 else:
                     wait_points = random.normalvariate(0.6, 0.05) * total_points
-                    points = [total_points - int(wait_points), int(wait_points)]
+                    points = [0, total_points - int(wait_points), int(wait_points)]
 
             elif scenario == 'majority_extreme':  # Extreme Majority-Minority Polarization
                 if i < len(vehicle_ids) * 0.2:
                     stop_points = random.normalvariate(0.95, 0.025) * total_points
-                    points = [int(stop_points), total_points - int(stop_points)]
+                    points = [0, int(stop_points), total_points - int(stop_points)]
                 else:
                     wait_points = random.normalvariate(0.6, 0.05) * total_points
-                    points = [total_points - int(wait_points), int(wait_points)]
+                    points = [0, total_points - int(wait_points), int(wait_points)]
 
             preferences_dict[veh_id] = {pref: point for pref, point in zip(pref_types, points)}
             self.vehicles[veh_id].preference = preferences_dict[veh_id]  # Assign the preferences to each vehicle.

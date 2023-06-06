@@ -65,8 +65,7 @@ def parse_args():
                         help="path to the model to be loaded")
     parser.add_argument("--mode", default='train', type=str,
                         help="mode of the run train/test")
-    parser.add_argument("--replay", default=False,
-                        type=bool, help="saving replay")
+    parser.add_argument("--replay", default=False, action="store_true", help="saving replay")
     parser.add_argument("--mfd", default=False, type=bool,
                         help="saving mfd data")
     parser.add_argument("--path", default='../runs/', type=str,
@@ -189,27 +188,31 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
                 votes = environ.vote_drivers(point_voting)
                 actions = {}
                 for agent_id in environ.agent_ids:
-                    actprob = np.zeros(environ.agents[0].n_actions)
-                    raw_net = {"agent_id": agent_id}
-                    for pref, weight in votes[agent_id].items():#zip(weights, pref_types):
-                        _act = policy_map[pref].act(torch.FloatTensor(
-                            obs[agent_id], device=device),
-                            epsilon=environ.eps,
-                            as_probs=True)
-                        _act = _act.numpy().squeeze()
-                        raw_net.update({pref : np.argmax(_act)})
+                    tl = environ.intersections[agent_id]
+                    if tl.time_to_act:
+                        actprob = np.zeros(environ.agents[0].n_actions)
+                        raw_net = {"agent_id": agent_id, 
+                                   "vote_weights": {}}
+                        for pref, weight in votes[agent_id].items():#zip(weights, pref_types):
+                            _act = policy_map[pref].act(torch.FloatTensor(
+                                obs[agent_id], device=device),
+                                epsilon=environ.eps,
+                                as_probs=True)
+                            _act = _act.numpy().squeeze()
+                            raw_net.update({pref : np.argmax(_act)})
+                            raw_net["vote_weights"].update({pref: weight})
 
-                        if args.vote_type=='majority':
-                            weight = 1*(weight==np.max(list(votes[agent_id].values()))) # zeros out the losing vote
+                            if args.vote_type=='majority':
+                                weight = 1*(weight==np.max(list(votes[agent_id].values()))) # zeros out the losing vote
 
-                        normed_act = environ._agents_dict[agent_id].rescale_preferences(pref, _act)
-                        actprob += weight*normed_act
-                        # print(pref, _act, normed_act)
-                    act = np.argmax(actprob/sum(votes[agent_id].values()))
-                    raw_net.update({"reference" : act})
-                    actions[agent_id] = act
-                    # print(np.array(raw_net)==act)
-                    logger.objective_alignment.append(raw_net)
+                            normed_act = environ._agents_dict[agent_id].rescale_preferences(pref, _act)
+                            actprob += weight*normed_act
+                            # print(pref, _act, normed_act)
+                        act = np.argmax(actprob/sum(votes[agent_id].values()))
+                        raw_net.update({"reference" : act})
+                        actions[agent_id] = act
+                        # print(np.array(raw_net)==act)
+                        logger.objective_alignment.append(raw_net)
 
 
             # Execute the actions
