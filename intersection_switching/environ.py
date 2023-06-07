@@ -339,6 +339,12 @@ class Environment(gym.Env):
                     wait_points = random.normalvariate(0.6, 0.05) * total_points
                     points = [0, total_points - int(wait_points), int(wait_points)]
 
+            elif scenario == 'debug_cumulative_majority':  # debug case
+                if i < len(vehicle_ids) * 0.5:
+                    points = [0, 1, 0]
+                else:
+                    points = [0, 0, 1]
+
             preferences_dict[veh_id] = {pref: point for pref, point in zip(pref_types, points)}
             self.vehicles[veh_id].preference = preferences_dict[veh_id]  # Assign the preferences to each vehicle.
 
