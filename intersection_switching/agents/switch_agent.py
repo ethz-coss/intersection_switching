@@ -136,26 +136,6 @@ class SwitchAgent(Agent):
                 lanes_veh_num.append((seg3 * VEHLENGTH) / (length/3))
         return lanes_veh_num
 
-    
-    def aggregate_votes(self, votes, agg_func=None):
-        """
-        Aggregates votes using the `agg_func`.
-        :param votes: list of tuples of (vote, weight). Vote is a boolean to switch phases
-        :param agg_func: aggregates votes and weights and returns the winning vote.
-        """
-        choices = {0: 0, 1: 0}
-        if agg_func is None:
-            agg_func = lambda x: x
-        for vote, weight in votes:
-            choices[vote] += agg_func(weight)
-        return max(choices, key=choices.get)
-
-
-    # def switch(self, eng, lane_vehs, lanes_count):
-    #     curr_phase = self.phase.ID
-    #     action = abs(curr_phase-1) # ID zero is clearing
-    #     super().apply_action(eng, action, lane_vehs, lanes_count)
-
     def apply_action(self, eng, phase_id, lane_vehs, lanes_count):
         action = phase_id
         self.update_arr_dep_veh_num(lane_vehs, lanes_count)
