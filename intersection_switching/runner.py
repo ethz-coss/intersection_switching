@@ -147,7 +147,7 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
 
         print("episode ", i_episode)
 
-        obs = environ.reset()
+        obs = environ.reset(seed=rng_seed)
         pref_types = ['speed', 'stops', 'wait']
         weights = args.vote_weights
         environ.weights = weights
@@ -204,7 +204,7 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
                             normed_act = environ._agents_dict[agent_id].rescale_preferences(pref, _act)
                             actprob += weight*normed_act
                             # print(pref, _act, normed_act)
-                        act = np.argmax(actprob/sum(votes[agent_id].values()))
+                        act = np.argmax(actprob)
                         raw_net.update({"reference" : act})
                         actions[agent_id] = act
                         # print(np.array(raw_net)==act)
