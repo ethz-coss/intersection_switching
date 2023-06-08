@@ -170,14 +170,12 @@ class Environment(gym.Env):
 
             # required to track distance of periodic trips
             for veh_id, speed in self.veh_speeds.items():
-                new_vehs = []
                 if veh_id not in self.vehicles:
                     self.vehicles[veh_id] = VehicleAgent(self, veh_id) # TODO: remove old vehicles
-                    new_vehs.append(veh_id)
                     if self.weights is not None:
-                        self.assign_driver_preferences(new_vehs, self.pref_types, weights=self.weights)
+                        self.assign_driver_preferences([veh_id], self.pref_types, weights=self.weights)
                     else:
-                        self.assign_driver_preferences(new_vehs, self.pref_types, total_points=self.total_points, scenario=self.scenario)
+                        self.assign_driver_preferences([veh_id], self.pref_types, total_points=self.total_points, scenario=self.scenario)
                 self.vehicles[veh_id].distance += speed
                 self.vehicles[veh_id].speeds.append(speed)
 
@@ -308,15 +306,16 @@ class Environment(gym.Env):
         preferences_dict = {}
 
         for i, veh_id in enumerate(vehicle_ids):
+            prob = np.random.random()
             if scenario == 'bipolar':  # Bipolar Preference Distribution
-                if i < len(vehicle_ids) / 2:
+                if prob < 0.5:
                     stop_points = random.normalvariate(0.8, 0.05) * total_points
                     points = [0, int(stop_points), total_points - int(stop_points)]
                 else:
-                    points = np.random.multinomial(total_points, np.ones(len(pref_types)) / len(pref_types))
+                    points = np.random.multinomial(total_points, [0, 0.5, 0.5])
 
             elif scenario == 'balanced_mild':  # Balanced Mild Polarization
-                if i < len(vehicle_ids) / 2:
+                if prob < 0.5:
                     stop_points = random.normalvariate(0.6, 0.05) * total_points
                     points = [0, int(stop_points), total_points - int(stop_points)]
                 else:
@@ -324,7 +323,7 @@ class Environment(gym.Env):
                     points = [0, total_points - int(wait_points), int(wait_points)]
 
             elif scenario == 'majority_mild':  # Majority-Minority Mild Polarization
-                if i < len(vehicle_ids) * 0.6:
+                if prob < 0.6:
                     stop_points = random.normalvariate(0.6, 0.05) * total_points
                     points = [0, int(stop_points), total_points - int(stop_points)]
                 else:
@@ -332,7 +331,7 @@ class Environment(gym.Env):
                     points = [0, total_points - int(wait_points), int(wait_points)]
 
             elif scenario == 'majority_extreme':  # Extreme Majority-Minority Polarization
-                if i < len(vehicle_ids) * 0.2:
+                if prob < 0.2:
                     stop_points = random.normalvariate(0.95, 0.025) * total_points
                     points = [0, int(stop_points), total_points - int(stop_points)]
                 else:
@@ -340,7 +339,7 @@ class Environment(gym.Env):
                     points = [0, total_points - int(wait_points), int(wait_points)]
 
             elif scenario == 'debug_cumulative_majority':  # debug case
-                if i < len(vehicle_ids) * 0.5:
+                if prob < 0.5:
                     points = [0, 1, 0]
                 else:
                     points = [0, 0, 1]
@@ -357,19 +356,20 @@ class Environment(gym.Env):
         for tl_id, intersection in self.intersections.items():
             for lane_id in intersection.approach_lanes:
                 for veh_id in lane_vehicles[lane_id]:
-                    if point_voting:
+                    # if point_voting:
                         # Sum up the scores based on the preferences of the vehicles.
                         for pref_type, points in self.vehicles[veh_id].preference.items():
                             votes[tl_id][pref_type] += points
-                    else:
-                        votes[tl_id][self.vehicles[veh_id].preference] += 1
+                    # else:
+                    #     votes[tl_id][self.vehicles[veh_id].preference] += 1
         return votes
 
     def assign_driver_preferences(self, vehicle_ids, pref_types, weights=None, total_points=None, scenario=None):
         if total_points and scenario:  # If point-based preference is enabled
             preferences_dict = self.distribute_points(vehicle_ids, pref_types, total_points, scenario)
         else:
-            preferences_dict = {id: np.random.choice(pref_types, p=weights) for id in vehicle_ids}
+            choice = np.random.choice(pref_types, p=weights)
+            preferences_dict = {id: {i: int(i == choice) for i in pref_types} for id in vehicle_ids}
 
-        for veh_id, preference in preferences_dict.items():
-            self.vehicles[veh_id].preference = preference
+            for veh_id, preference in preferences_dict.items():
+                self.vehicles[veh_id].preference = preference
