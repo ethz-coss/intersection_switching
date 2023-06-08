@@ -3,7 +3,6 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import torch
-import random
 import pickle
 import dill
 # from network_parser import get_network

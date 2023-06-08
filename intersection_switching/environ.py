@@ -61,7 +61,7 @@ class Environment(gym.Env):
             self._warmup()
 
         self.time = 0
-        random.seed()
+        self.rng = np.random.default_rng(seed=args.seed)
 
         self.veh_speeds = self.eng.get_vehicle_speed()
         self.lane_vehs = self.eng.get_lane_vehicles()
@@ -306,36 +306,36 @@ class Environment(gym.Env):
         preferences_dict = {}
 
         for i, veh_id in enumerate(vehicle_ids):
-            prob = np.random.random()
+            prob = self.rng.random()
             if scenario == 'bipolar':  # Bipolar Preference Distribution
                 if prob < 0.5:
-                    stop_points = random.normalvariate(0.8, 0.05) * total_points
+                    stop_points = self.rng.normal(0.8, 0.05) * total_points
                     points = [0, int(stop_points), total_points - int(stop_points)]
                 else:
-                    points = np.random.multinomial(total_points, [0, 0.5, 0.5])
+                    points = self.rng.multinomial(total_points, [0, 0.5, 0.5])
 
             elif scenario == 'balanced_mild':  # Balanced Mild Polarization
                 if prob < 0.5:
-                    stop_points = random.normalvariate(0.6, 0.05) * total_points
+                    stop_points = self.rng.normal(0.6, 0.05) * total_points
                     points = [0, int(stop_points), total_points - int(stop_points)]
                 else:
-                    wait_points = random.normalvariate(0.6, 0.05) * total_points
+                    wait_points = self.rng.normal(0.6, 0.05) * total_points
                     points = [0, total_points - int(wait_points), int(wait_points)]
 
             elif scenario == 'majority_mild':  # Majority-Minority Mild Polarization
                 if prob < 0.6:
-                    stop_points = random.normalvariate(0.6, 0.05) * total_points
+                    stop_points = self.rng.normal(0.6, 0.05) * total_points
                     points = [0, int(stop_points), total_points - int(stop_points)]
                 else:
-                    wait_points = random.normalvariate(0.6, 0.05) * total_points
+                    wait_points = self.rng.normal(0.6, 0.05) * total_points
                     points = [0, total_points - int(wait_points), int(wait_points)]
 
             elif scenario == 'majority_extreme':  # Extreme Majority-Minority Polarization
                 if prob < 0.2:
-                    stop_points = random.normalvariate(0.95, 0.025) * total_points
+                    stop_points = self.rng.normal(0.95, 0.025) * total_points
                     points = [0, int(stop_points), total_points - int(stop_points)]
                 else:
-                    wait_points = random.normalvariate(0.6, 0.05) * total_points
+                    wait_points = self.rng.normal(0.6, 0.05) * total_points
                     points = [0, total_points - int(wait_points), int(wait_points)]
 
             elif scenario == 'debug_cumulative_majority':  # debug case
@@ -368,7 +368,7 @@ class Environment(gym.Env):
         if total_points and scenario:  # If point-based preference is enabled
             preferences_dict = self.distribute_points(vehicle_ids, pref_types, total_points, scenario)
         else:
-            choice = np.random.choice(pref_types, p=weights)
+            choice = self.rng.choice(pref_types, p=weights)
             preferences_dict = {id: {i: int(i == choice) for i in pref_types} for id in vehicle_ids}
 
             for veh_id, preference in preferences_dict.items():

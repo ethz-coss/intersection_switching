@@ -26,14 +26,14 @@ import os
 # vote_quarter_6 = [0, 0.75, 0.25]
 
 scenarios = {
+    'bipolar': [0, 0.5, 0.5],
+    'balanced_mild': [0, 0.5, 0.5],
+    'majority_mild': [0, 0.6, 0.4],
+    'majority_extreme': [0, 0.2, 0.8],
+}
 
-    # 'bipolar': [0, 0.5, 0.5],
-    # 'balanced_mild': [0, 0.5, 0.5],
-    # 'majority_mild': [0, 0.6, 0.4],
-    # 'majority_extreme': [0, 0.2, 0.8],
-
+scenarios = {
     'debug_cumulative_majority': [0, 0.5, 0.5],
-
 }
 
 pure_methods = ['stops', 'waits']
@@ -56,9 +56,9 @@ if __name__=='__main__':
                         if input_method=='binary':
                         # if scenario in pure_methods:
                             vote_weights = " ".join(str(x) for x in weights)
-                            call = f"python runner.py --sim_config {sim_config} --num_sim_steps {sim_steps} --eps_start 0 --eps_end 0 --lr 0.0005 --mode vote --agents_type learning --num_episodes 1 --vote_weights {vote_weights} --mfd False --scenario {scenario} --vote_type {vote_type} --path '../runs/{vote_type}/{input_method}/'"
+                            call = f"python runner.py --sim_config {sim_config} --num_sim_steps {sim_steps} --seed {i} --eps_start 0 --eps_end 0 --lr 0.0005 --mode vote --agents_type learning --num_episodes 1 --vote_weights {vote_weights} --mfd False --scenario {scenario} --vote_type {vote_type} --path '../runs/{vote_type}/{input_method}/'"
                         else:  # cumulative voting
-                            call = f"python runner.py --sim_config {sim_config} --num_sim_steps {sim_steps} --eps_start 0 --eps_end 0 --lr 0.0005 --mode vote --agents_type learning --num_episodes 1 --mfd False --total_points {total_points} --scenario {scenario} --vote_type {vote_type} --path '../runs/{vote_type}/{input_method}/'"
+                            call = f"python runner.py --sim_config {sim_config} --num_sim_steps {sim_steps} --seed {i} --eps_start 0 --eps_end 0 --lr 0.0005 --mode vote --agents_type learning --num_episodes 1 --mfd False --total_points {total_points} --scenario {scenario} --vote_type {vote_type} --path '../runs/{vote_type}/{input_method}/'"
                         calls.append(call)
 
                     pycalls = "\n".join(calls)

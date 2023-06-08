@@ -1,7 +1,6 @@
 from engine.cityflow.intersection import Movement, Phase
 import numpy as np
 from gym import spaces
-import random
 
 class VehicleAgent:
     """

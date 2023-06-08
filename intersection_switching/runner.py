@@ -1,5 +1,4 @@
 import numpy as np
-import random
 import argparse
 
 from models.dqn import DQN
@@ -51,6 +50,8 @@ def parse_args():
                         help="the frequency of the updates (training pass) of the deep-q-network, default=10")
     parser.add_argument("--batch_size", default=64, type=int,
                         help="the size of the mini-batch used to train the deep-q-network, default=64")
+    parser.add_argument("--seed", default=SEED, type=int,
+                        help=f"seed for randomization, default={SEED}")
     parser.add_argument("--lr", default=5e-4, type=float,
                         help="the learning rate for the dqn, default=5e-4")
     parser.add_argument("--eps_start", default=1,
@@ -130,14 +131,10 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
     best_reward = -999999
     saved_model = None
     environ.best_epoch = 0
-
+    rng_seed = args.seed
+    
     environ.eng.set_save_replay(open=False)
-    # environ.eng.set_random_seed(SEED)
-    # random.seed(SEED)
-    # np.random.seed(SEED)
-
-    random.seed()
-    np.random.seed()
+    environ.eng.set_random_seed(rng_seed)
 
     log_phases = False
 
@@ -167,7 +164,6 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
 
         while environ.time < num_sim_steps:
             # Dispatch the observations to the model to get the tuple of actions
-            # actions = {id: 1*(np.random.random()>0.5) for id in environ.agent_ids} # random policy
 
             if args.mode == 'train' and environ.agents_type in ['learning']:
                 # actions = {}
@@ -291,7 +287,7 @@ if __name__ == "__main__":
     obs_space = environ.observation_space
 
     if args.agents_type in ['learning']:
-        policy = DQN(obs_space, act_space, seed=SEED, load=args.load)
+        policy = DQN(obs_space, act_space, seed=args.seed, load=args.load)
     else:
         print('not using a policy')
         policy = None
@@ -310,7 +306,7 @@ if __name__ == "__main__":
             if pref in ignored_prefs:
                 load_path = None
             policy_map[pref] = DQN(obs_space, act_space,
-                                   seed=SEED, load=load_path)
+                                   seed=args.seed, load=load_path)
     else:
         policy_map=None
 
