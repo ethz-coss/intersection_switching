@@ -85,6 +85,8 @@ def parse_args():
                         help="number of vehicles in the scenario")
     parser.add_argument("--vote_weights", default=None, type=float, nargs=3,
                         help="number of vehicles in the scenario")
+    parser.add_argument("--binary", default=False, action="store_true",
+                        help="whether votes are binary or point-based")
     parser.add_argument("--vote_type", default='proportional', type=str,
                         help="type of voting used")
     parser.add_argument("--total_points", default=10, type=int,
@@ -96,31 +98,31 @@ def parse_args():
     return parser.parse_args()
 
 
-def get_vote_action(environ):
-    votes = environ.vote_drivers()
-    actions = {}
-    for agent_id in environ.agent_ids:
-        actprob = np.zeros(environ.act_space.n)
-        raw_net = {}
-        for pref, weight in votes.items():#zip(weights, pref_types):
-            _act = policy_map[pref].act(torch.FloatTensor(
-                obs[agent_id], device=device),
-                epsilon=environ.eps,
-                as_probs=True)
-            _act = _act.numpy().squeeze()
-            raw_net.update({pref : np.argmax(_act)})
+# def get_vote_action(environ):
+#     votes = environ.vote_drivers()
+#     actions = {}
+#     for agent_id in environ.agent_ids:
+#         actprob = np.zeros(environ.act_space.n)
+#         raw_net = {}
+#         for pref, weight in votes.items():#zip(weights, pref_types):
+#             _act = policy_map[pref].act(torch.FloatTensor(
+#                 obs[agent_id], device=device),
+#                 epsilon=environ.eps,
+#                 as_probs=True)
+#             _act = _act.numpy().squeeze()
+#             raw_net.update({pref : np.argmax(_act)})
 
-            if args.vote_type=='majority':
-                weight = 1*(weight==np.max(votes.keys())) # zeros out the losing vote
+#             if args.vote_type=='majority':
+#                 weight = 1*(weight==np.max(votes.keys())) # zeros out the losing vote
 
-            normed_act = environ._agents_dict[agent_id].rescale_preferences(pref, _act)
-            actprob += weight*normed_act
-            # print(pref, _act, normed_act)
-        act = np.argmax(actprob/sum(votes.values()))
-        raw_net.update({"reference" : act})
-        actions[agent_id] = act
-        # print(np.array(raw_net)==act)
-        logger.objective_alignment.append(raw_net)
+#             normed_act = environ._agents_dict[agent_id].rescale_preferences(pref, _act)
+#             actprob += weight*normed_act
+#             # print(pref, _act, normed_act)
+#         act = np.argmax(actprob/sum(votes.values()))
+#         raw_net.update({"reference" : act})
+#         actions[agent_id] = act
+#         # print(np.array(raw_net)==act)
+#         logger.objective_alignment.append(raw_net)
 
 
 def run_exp(environ, args, num_episodes, num_sim_steps, logger,
@@ -181,13 +183,13 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
 
             if args.mode=='vote':
                 point_voting = args.vote_weights is None
-                votes = environ.vote_drivers(point_voting)
+                votes = environ.vote_drivers(args.total_points, point_voting, args.binary)
                 actions = {}
                 for agent_id in environ.agent_ids:
                     tl = environ.intersections[agent_id]
                     if tl.time_to_act:
                         actprob = np.zeros(environ.agents[0].n_actions)
-                        raw_net = {"agent_id": agent_id, 
+                        raw_net = {"intersection_round": f'{agent_id}_{environ.time}', 
                                    "vote_weights": {}}
                         for pref, weight in votes[agent_id].items():#zip(weights, pref_types):
                             _act = policy_map[pref].act(torch.FloatTensor(
@@ -208,7 +210,9 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
                         raw_net.update({"reference" : act})
                         actions[agent_id] = act
                         # print(np.array(raw_net)==act)
+                        satisfactions = environ.get_driver_satisfactions(agent_id, raw_net)
                         logger.objective_alignment.append(raw_net)
+                        logger.driver_satisfaction.extend(satisfactions)
 
 
             # Execute the actions

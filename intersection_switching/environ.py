@@ -105,7 +105,7 @@ class Environment(gym.Env):
 
         self.lanes = {}
 
-        for lane_id in self.eng.get_lane_vehicles().keys():
+        for lane_id in self.lane_vehs.keys():
             self.lanes[lane_id] = Lane(self.eng, ID=lane_id)
 
         # metrics
@@ -279,7 +279,7 @@ class Environment(gym.Env):
     def get_mfd_data(self, time_window=60):
         mfd_detailed = {}
 
-        for lane_id in self.eng.get_lane_vehicles().keys():
+        for lane_id in self.lane_vehs.keys():
             mfd_detailed[lane_id] = {"speed": [], "density": []}
 
         for lane_id, lane in self.lanes.items():
@@ -349,27 +349,41 @@ class Environment(gym.Env):
 
         return preferences_dict
 
-    def vote_drivers(self, point_voting=False):
+    def vote_drivers(self, total_points, point_voting=False, binary=False):
         votes = {tl_id: {'speed': 0, 'wait': 0, 'stops': 0} for tl_id, tl in self.intersections.items()}
 
-        lane_vehicles = self.eng.get_lane_vehicles()
+        lane_vehicles = self.lane_vehs
         for tl_id, intersection in self.intersections.items():
             for lane_id in intersection.approach_lanes:
                 for veh_id in lane_vehicles[lane_id]:
-                    # if point_voting:
-                        # Sum up the scores based on the preferences of the vehicles.
-                        for pref_type, points in self.vehicles[veh_id].preference.items():
-                            votes[tl_id][pref_type] += points
-                    # else:
-                    #     votes[tl_id][self.vehicles[veh_id].preference] += 1
+                    max_points = max(self.vehicles[veh_id].preference.values())
+                    # Sum up the scores based on the preferences of the vehicles.
+                    for pref_type, _points in self.vehicles[veh_id].preference.items():
+                        points = _points
+                        if binary: # binarizes to total_points
+                            points = total_points*(_points==max_points)
+                        votes[tl_id][pref_type] += points
         return votes
 
     def assign_driver_preferences(self, vehicle_ids, pref_types, weights=None, total_points=None, scenario=None):
         if total_points and scenario:  # If point-based preference is enabled
             preferences_dict = self.distribute_points(vehicle_ids, pref_types, total_points, scenario)
         else:
+            print("WARNING SHOULD NOT BE HAPPENING")
             choice = self.rng.choice(pref_types, p=weights)
             preferences_dict = {id: {i: int(i == choice) for i in pref_types} for id in vehicle_ids}
 
             for veh_id, preference in preferences_dict.items():
                 self.vehicles[veh_id].preference = preference
+
+    def get_driver_satisfactions(self, agent_id, raw_net):
+        satisfactions = []
+        lane_vehicles = self.lane_vehs
+        for lane_id in self.intersections[agent_id].approach_lanes:
+            for veh_id in lane_vehicles[lane_id]:
+                score = 0
+                for pref_type, points in self.vehicles[veh_id].preference.items():
+                    if raw_net["reference"] == raw_net[pref_type]:
+                        score += points
+                satisfactions.append(score/sum(self.vehicles[veh_id].preference.values()))
+        return satisfactions
