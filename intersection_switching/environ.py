@@ -310,14 +310,14 @@ class Environment(gym.Env):
             if scenario == 'bipolar':  # Bipolar Preference Distribution
                 if prob < 0.5:
                     stop_points = self.rng.normal(0.8, 0.05) * total_points
-                    points = [0, int(stop_points), total_points - int(stop_points)]
+                    points = [0, stop_points, total_points - stop_points]
                 else:
                     points = self.rng.multinomial(total_points, [0, 0.5, 0.5])
 
             elif scenario == 'balanced_mild':  # Balanced Mild Polarization
                 if prob < 0.5:
                     stop_points = self.rng.normal(0.6, 0.05) * total_points
-                    points = [0, int(stop_points), total_points - int(stop_points)]
+                    points = [0, stop_points, total_points - stop_points]
                 else:
                     wait_points = self.rng.normal(0.6, 0.05) * total_points
                     points = [0, total_points - int(wait_points), int(wait_points)]
@@ -325,7 +325,7 @@ class Environment(gym.Env):
             elif scenario == 'majority_mild':  # Majority-Minority Mild Polarization
                 if prob < 0.6:
                     stop_points = self.rng.normal(0.6, 0.05) * total_points
-                    points = [0, int(stop_points), total_points - int(stop_points)]
+                    points = [0, stop_points, total_points - stop_points]
                 else:
                     wait_points = self.rng.normal(0.6, 0.05) * total_points
                     points = [0, total_points - int(wait_points), int(wait_points)]
@@ -333,7 +333,7 @@ class Environment(gym.Env):
             elif scenario == 'majority_extreme':  # Extreme Majority-Minority Polarization
                 if prob < 0.2:
                     stop_points = self.rng.normal(0.95, 0.025) * total_points
-                    points = [0, int(stop_points), total_points - int(stop_points)]
+                    points = [0, stop_points, total_points - stop_points]
                 else:
                     wait_points = self.rng.normal(0.6, 0.05) * total_points
                     points = [0, total_points - int(wait_points), int(wait_points)]
