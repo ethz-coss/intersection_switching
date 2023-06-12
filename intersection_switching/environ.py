@@ -385,5 +385,7 @@ class Environment(gym.Env):
                 for pref_type, points in self.vehicles[veh_id].preference.items():
                     if raw_net["reference"] == raw_net[pref_type]:
                         score += points
-                satisfactions.append(score/sum(self.vehicles[veh_id].preference.values()))
+                satisfaction = score/sum(self.vehicles[veh_id].preference.values())
+                satisfactions.append(satisfaction)
+                self.vehicles[veh_id].satisfactions.append(satisfaction)
         return satisfactions

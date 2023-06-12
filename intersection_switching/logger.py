@@ -29,7 +29,8 @@ class Logger:
         self.travel_times = []
 
         self.objective_alignment = []
-
+        self.vote_satisfaction = [] #individual votes, no driver tracking
+        self.driver_satisfaction = []
         self.reward = 0
 
         config_dir, config_file = os.path.split(args.sim_config)
@@ -187,8 +188,16 @@ class Logger:
             pickle.dump(self.travel_times, f)
 
         with open(os.path.join(self.log_path, "obj_alignment.pickle"), "wb") as f:
-            pickle.dump(self.objective_alignment, f)        
-            
+            pickle.dump(self.objective_alignment, f)
+
+        with open(os.path.join(self.log_path, "satisfaction.pickle"), "wb") as f:
+            pickle.dump(self.vote_satisfaction, f)  
+
+        with open(os.path.join(self.log_path, "satisfaction_drivers.pickle"), "wb") as f:
+            for vid, veh in environ.vehicles.items():
+                self.driver_satisfaction.append(np.mean(veh.satisfactions))
+            pickle.dump(self.driver_satisfaction, f) 
+
         if environ.agents_type in ['learning', 'hybrid', 'presslight', 'policy', 'denflow']:
             with open(os.path.join(self.log_path, "episode_rewards.pickle"), "wb") as f:
                 pickle.dump(self.plot_rewards, f)

@@ -212,7 +212,7 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
                         # print(np.array(raw_net)==act)
                         satisfactions = environ.get_driver_satisfactions(agent_id, raw_net)
                         logger.objective_alignment.append(raw_net)
-                        logger.driver_satisfaction.extend(satisfactions)
+                        logger.vote_satisfaction.extend(satisfactions)
 
 
             # Execute the actions

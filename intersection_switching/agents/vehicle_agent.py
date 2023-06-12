@@ -22,6 +22,7 @@ class VehicleAgent:
         self.distance = 0
         self.total_rewards = []
         self.start_time = 0
+        self.satisfactions = []
 
         n_actions = 2 # (binary choice?)
         n_states = 10 # TODO: edit
@@ -63,6 +64,7 @@ class VehicleAgent:
         self.distance = 0
         self.total_rewards = []
         self.start_time = 0
+        self.satisfactions = []
 
     def observe(self, eng, time, lanes_count, lane_vehs, veh_distance):
         raise NotImplementedError
