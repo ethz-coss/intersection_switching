@@ -27,9 +27,8 @@ import os
 
 scenarios = {
     'bipolar': [0, 0.5, 0.5],
-    'balanced_mild': [0, 0.5, 0.5],
-    'majority_mild': [0, 0.6, 0.4],
     'majority_extreme': [0, 0.2, 0.8],
+    'random': [0, 0.5, 0.5],
 }
 
 scenarios = {
