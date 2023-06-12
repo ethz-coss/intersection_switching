@@ -141,9 +141,8 @@ names_color_map = {'Stops': colors[1],
                     'Prop S+W': colors[0],
                     # 'Major S+W': colors[6],
                     'bipolar': colors[3],
-                    'balanced_mild': colors[4],
-                    'majority_mild': colors[5],
-                    'majority_extreme': colors[6]                            
+                    'random': colors[4],
+                    'majority_extreme': colors[5]
                     }
 
 for (scenario, vote_scenario) in itertools.product(scenarios, vote_scenarios):
