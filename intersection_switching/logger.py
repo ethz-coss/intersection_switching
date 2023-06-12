@@ -30,7 +30,7 @@ class Logger:
 
         self.objective_alignment = []
         self.vote_satisfaction = [] #individual votes, no driver tracking
-        self.driver_satisfaction = []
+        self.driver_satisfaction = {}
         self.reward = 0
 
         config_dir, config_file = os.path.split(args.sim_config)
@@ -195,7 +195,9 @@ class Logger:
 
         with open(os.path.join(self.log_path, "satisfaction_drivers.pickle"), "wb") as f:
             for vid, veh in environ.vehicles.items():
-                self.driver_satisfaction.append(np.mean(veh.satisfactions))
+                grp = veh.group
+                drive_sats = self.driver_satisfaction.setdefault(grp, [])
+                drive_sats.append(np.mean(veh.satisfactions))
             pickle.dump(self.driver_satisfaction, f) 
 
         if environ.agents_type in ['learning', 'hybrid', 'presslight', 'policy', 'denflow']:

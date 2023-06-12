@@ -307,11 +307,13 @@ class Environment(gym.Env):
 
         for i, veh_id in enumerate(vehicle_ids):
             prob = self.rng.random()
+            group = "A"
             if scenario == 'bipolar':  # Bipolar Preference Distribution
                 if prob < 0.5:
                     stop_points = self.rng.normal(0.8, 0.05) * total_points
                     points = [0, stop_points, total_points - stop_points]
                 else:
+                    group = "B"
                     points = self.rng.multinomial(total_points, [0, 0.5, 0.5])
 
             elif scenario == 'balanced_mild':  # Balanced Mild Polarization
@@ -319,6 +321,7 @@ class Environment(gym.Env):
                     stop_points = self.rng.normal(0.6, 0.05) * total_points
                     points = [0, stop_points, total_points - stop_points]
                 else:
+                    group = "B"
                     wait_points = self.rng.normal(0.6, 0.05) * total_points
                     points = [0, total_points - int(wait_points), int(wait_points)]
 
@@ -327,6 +330,7 @@ class Environment(gym.Env):
                     stop_points = self.rng.normal(0.6, 0.05) * total_points
                     points = [0, stop_points, total_points - stop_points]
                 else:
+                    group = "B"
                     wait_points = self.rng.normal(0.6, 0.05) * total_points
                     points = [0, total_points - int(wait_points), int(wait_points)]
 
@@ -335,6 +339,7 @@ class Environment(gym.Env):
                     stop_points = self.rng.normal(0.95, 0.025) * total_points
                     points = [0, stop_points, total_points - stop_points]
                 else:
+                    group = "B"
                     wait_points = self.rng.normal(0.6, 0.05) * total_points
                     points = [0, total_points - int(wait_points), int(wait_points)]
 
@@ -342,11 +347,12 @@ class Environment(gym.Env):
                 if prob < 0.5:
                     points = [0, 1, 0]
                 else:
+                    group = "B"
                     points = [0, 0, 1]
 
             preferences_dict[veh_id] = {pref: point for pref, point in zip(pref_types, points)}
             self.vehicles[veh_id].preference = preferences_dict[veh_id]  # Assign the preferences to each vehicle.
-
+            self.vehicles[veh_id].group = group
         return preferences_dict
 
     def vote_drivers(self, total_points, point_voting=False, binary=False):
