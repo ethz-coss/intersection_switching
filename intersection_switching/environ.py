@@ -309,40 +309,23 @@ class Environment(gym.Env):
             prob = self.rng.random()
             if scenario == 'bipolar':  # Bipolar Preference Distribution
                 if prob < 0.5:
-                    stop_points = self.rng.normal(0.8, 0.05) * total_points
+                    stop_points = self.rng.normal(0.9, 0.05) * total_points
                     points = [0, stop_points, total_points - stop_points]
                 else:
-                    points = self.rng.multinomial(total_points, [0, 0.5, 0.5])
-
-            elif scenario == 'balanced_mild':  # Balanced Mild Polarization
-                if prob < 0.5:
-                    stop_points = self.rng.normal(0.6, 0.05) * total_points
-                    points = [0, stop_points, total_points - stop_points]
-                else:
-                    wait_points = self.rng.normal(0.6, 0.05) * total_points
-                    points = [0, total_points - int(wait_points), int(wait_points)]
-
-            elif scenario == 'majority_mild':  # Majority-Minority Mild Polarization
-                if prob < 0.6:
-                    stop_points = self.rng.normal(0.6, 0.05) * total_points
-                    points = [0, stop_points, total_points - stop_points]
-                else:
-                    wait_points = self.rng.normal(0.6, 0.05) * total_points
-                    points = [0, total_points - int(wait_points), int(wait_points)]
+                    wait_points = self.rng.normal(0.9, 0.05) * total_points
+                    points = [0, total_points - wait_points, wait_points]
 
             elif scenario == 'majority_extreme':  # Extreme Majority-Minority Polarization
                 if prob < 0.2:
-                    stop_points = self.rng.normal(0.95, 0.025) * total_points
+                    stop_points = self.rng.normal(0.9, 0.025) * total_points
                     points = [0, stop_points, total_points - stop_points]
                 else:
                     wait_points = self.rng.normal(0.6, 0.05) * total_points
-                    points = [0, total_points - int(wait_points), int(wait_points)]
+                    points = [0, total_points - wait_points, wait_points]
 
-            elif scenario == 'debug_cumulative_majority':  # debug case
-                if prob < 0.5:
-                    points = [0, 1, 0]
-                else:
-                    points = [0, 0, 1]
+            elif scenario == 'random':  # Random Distribution
+                points = self.rng.multinomial(total_points, np.ones(2) / 2)
+                points = [0] + list(points)
 
             preferences_dict[veh_id] = {pref: point for pref, point in zip(pref_types, points)}
             self.vehicles[veh_id].preference = preferences_dict[veh_id]  # Assign the preferences to each vehicle.
