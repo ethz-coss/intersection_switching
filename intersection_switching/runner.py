@@ -52,6 +52,7 @@ def parse_args():
                         help="the size of the mini-batch used to train the deep-q-network, default=64")
     parser.add_argument("--seed", default=SEED, type=int,
                         help=f"seed for randomization, default={SEED}")
+    parser.add_argument("--trajectory",  default=False, action="store_true", help="store vehicle tracks for TSD")
     parser.add_argument("--lr", default=5e-4, type=float,
                         help="the learning rate for the dqn, default=5e-4")
     parser.add_argument("--eps_start", default=1,
@@ -190,7 +191,8 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
                     if tl.time_to_act:
                         actprob = np.zeros(environ.agents[0].n_actions)
                         raw_net = {"intersection_round": f'{agent_id}_{environ.time}', 
-                                   "vote_weights": {}}
+                                   "vote_weights": {},
+                                   "qvals": {}}
                         for pref, weight in votes[agent_id].items():#zip(weights, pref_types):
                             _act = policy_map[pref].act(torch.FloatTensor(
                                 obs[agent_id], device=device),
@@ -198,6 +200,7 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
                                 as_probs=True)
                             _act = _act.numpy().squeeze()
                             raw_net.update({pref : np.argmax(_act)})
+                            raw_net['qvals'].update({pref : _act})
                             raw_net["vote_weights"].update({pref: weight})
 
                             if args.vote_type=='majority':
@@ -210,9 +213,10 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
                         raw_net.update({"reference" : act})
                         actions[agent_id] = act
                         # print(np.array(raw_net)==act)
-                        satisfactions = environ.get_driver_satisfactions(agent_id, raw_net)
+                        environ.get_driver_satisfaction(agent_id, raw_net)
+                        alignment = environ.get_driver_alignment(agent_id, raw_net)
                         logger.objective_alignment.append(raw_net)
-                        logger.vote_satisfaction.extend(satisfactions)
+                        logger.vote_satisfaction.extend(alignment)
 
 
             # Execute the actions

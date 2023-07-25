@@ -41,6 +41,8 @@ class Environment(gym.Env):
             self.fixed_num_vehicles = False
             sim_config = args.sim_config
 
+        self.save_trajectory = args.trajectory
+        self.trajectory = []
 
         self.eng = cityflow.Engine(sim_config, thread_num=os.cpu_count())
         self.ID = ID
@@ -178,6 +180,17 @@ class Environment(gym.Env):
                         self.assign_driver_preferences([veh_id], self.pref_types, total_points=self.total_points, scenario=self.scenario)
                 self.vehicles[veh_id].distance += speed
                 self.vehicles[veh_id].speeds.append(speed)
+                if self.save_trajectory:
+                    info = self.eng.get_vehicle_info(veh_id)
+                    if info['running']=='1' and 'road' in info: # not driving on junction
+                        self.trajectory.append({
+                            'speed': speed,
+                            'distance': float(info['distance']),
+                            'lane': info['drivable'],
+                            'road': info['road'],
+                            'time': self.time,
+                            'veh_id': veh_id
+                        })
 
             for lane_id, lane in self.lanes.items():
                 lane.update_flow_data(self.eng, self.lane_vehs)
@@ -331,6 +344,14 @@ class Environment(gym.Env):
                 points = self.rng.multinomial(total_points, np.ones(2) / 2)
                 points = [0] + list(points)
 
+            elif scenario == 'stops':
+                group = "B"
+                points = [0, total_points, 0]
+
+            elif scenario == 'waits':
+                group = "B"
+                points = [0, 0, total_points]
+
             preferences_dict[veh_id] = {pref: point for pref, point in zip(pref_types, points)}
             self.vehicles[veh_id].preference = preferences_dict[veh_id]  # Assign the preferences to each vehicle.
             self.vehicles[veh_id].group = group
@@ -363,8 +384,31 @@ class Environment(gym.Env):
             for veh_id, preference in preferences_dict.items():
                 self.vehicles[veh_id].preference = preference
 
-    def get_driver_satisfactions(self, agent_id, raw_net):
-        satisfactions = []
+    def get_driver_satisfaction(self, agent_id, raw_net):
+        lane_vehicles = self.lane_vehs
+        act_idx = raw_net["reference"]
+        for lane_id in self.intersections[agent_id].approach_lanes:
+            for veh_id in lane_vehicles[lane_id]:
+                score = 0
+                score_denom = 0
+                all_score = 0
+                all_denom = 0
+                for pref_type, points in self.vehicles[veh_id].preference.items():
+                    qvals_pref = np.array(raw_net['qvals'][pref_type])
+                    # score += qvals_pref[act_idx]*points
+                    # score_denom += qvals_pref[act_idx]
+                    all_score += qvals_pref*points
+                    all_denom += qvals_pref
+                utility = all_score/all_denom
+
+                satisfaction = utility[act_idx]
+                dissatisfaction = np.max(utility) - satisfaction
+
+                self.vehicles[veh_id].satisfactions.append(satisfaction)
+                self.vehicles[veh_id].dissatisfactions.append(dissatisfaction)
+
+    def get_driver_alignment(self, agent_id, raw_net):
+        intersection_alignments = []
         lane_vehicles = self.lane_vehs
         for lane_id in self.intersections[agent_id].approach_lanes:
             for veh_id in lane_vehicles[lane_id]:
@@ -372,7 +416,7 @@ class Environment(gym.Env):
                 for pref_type, points in self.vehicles[veh_id].preference.items():
                     if raw_net["reference"] == raw_net[pref_type]:
                         score += points
-                satisfaction = score/sum(self.vehicles[veh_id].preference.values())
-                satisfactions.append(satisfaction)
-                self.vehicles[veh_id].satisfactions.append(satisfaction)
-        return satisfactions
+                alignment = score/sum(self.vehicles[veh_id].preference.values())
+                intersection_alignments.append(alignment)
+                self.vehicles[veh_id].alignments.append(alignment)
+        return intersection_alignments

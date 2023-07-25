@@ -31,6 +31,7 @@ class Logger:
         self.objective_alignment = []
         self.vote_satisfaction = [] #individual votes, no driver tracking
         self.driver_satisfaction = {}
+        self.driver_alignment = {}
         self.reward = 0
 
         config_dir, config_file = os.path.split(args.sim_config)
@@ -63,14 +64,14 @@ class Logger:
         head, tail = os.path.split(self.log_path)
         i = 1
 
-        if args.ID:
+        if args.ID is not None:
             self.log_path = os.path.join(head, f'{tail}({args.ID})')
         else:
             while os.path.exists(self.log_path):
                 self.log_path = os.path.join(head, f'{tail}({i})')
                 i += 1
         print(f'saving to {self.log_path}')
-        os.makedirs(self.log_path)
+        os.makedirs(self.log_path, exist_ok=True)
         self.scenario_name = scenario_name
 
     def log_measures(self, environ):
@@ -156,6 +157,10 @@ class Logger:
             with open(os.path.join(self.log_path, "memory.dill"), "wb") as f:
                 dill.dump(policy.memory.memory, f)
 
+        if self.args.trajectory:
+            with open(os.path.join(self.log_path, "trajectory.pickle"), "wb") as f:
+                pickle.dump(environ.trajectory, f)
+
         with open(os.path.join(self.log_path, "agent_history.dill"), "wb") as f:
             pickle.dump(environ.agent_history, f)
         with open(os.path.join(self.log_path, "waiting_time.pickle"), "wb") as f:
@@ -190,16 +195,26 @@ class Logger:
         with open(os.path.join(self.log_path, "obj_alignment.pickle"), "wb") as f:
             pickle.dump(self.objective_alignment, f)
 
-        with open(os.path.join(self.log_path, "satisfaction.pickle"), "wb") as f:
+        with open(os.path.join(self.log_path, "alignment_intersection.pickle"), "wb") as f:
             pickle.dump(self.vote_satisfaction, f)  
+
+        with open(os.path.join(self.log_path, "alignment_drivers.pickle"), "wb") as f:
+            for vid, veh in environ.vehicles.items():
+                grp = veh.group
+                drive_sats = self.driver_alignment.setdefault(grp, [])
+                drive_sats.append(np.mean(veh.alignments))
+            pickle.dump(self.driver_alignment, f)
 
         with open(os.path.join(self.log_path, "satisfaction_drivers.pickle"), "wb") as f:
             for vid, veh in environ.vehicles.items():
                 grp = veh.group
-                drive_sats = self.driver_satisfaction.setdefault(grp, [])
-                drive_sats.append(np.mean(veh.satisfactions))
-            pickle.dump(self.driver_satisfaction, f) 
+                drive_sats = self.driver_satisfaction.setdefault(grp, {"satisfaction": [],
+                                                                       "dissatisfaction": []})
+                drive_sats['satisfaction'].append(np.mean(veh.satisfactions))
+                drive_sats['dissatisfaction'].append(np.mean(veh.dissatisfactions))
 
+            pickle.dump(self.driver_satisfaction, f) 
+            
         if environ.agents_type in ['learning', 'hybrid', 'presslight', 'policy', 'denflow']:
             with open(os.path.join(self.log_path, "episode_rewards.pickle"), "wb") as f:
                 pickle.dump(self.plot_rewards, f)

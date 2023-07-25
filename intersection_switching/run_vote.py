@@ -25,15 +25,14 @@ import os
 # vote_quarter_5 = [0.25, 0.75, 0]
 # vote_quarter_6 = [0, 0.75, 0.25]
 
-scenarios = {
+vote_scenarios = {
     'bipolar': [0, 0.5, 0.5],
     'majority_extreme': [0, 0.2, 0.8],
     'random': [0, 0.5, 0.5],
+    'stops': [0, 1, 0],
+    'waits': [0, 0, 1],
 }
 
-scenarios = {
-    'debug_cumulative_majority': [0, 0.5, 0.5],
-}
 
 pure_methods = ['stops', 'waits']
 
@@ -43,22 +42,30 @@ vote_types = ['proportional', 'majority']
 
 total_points = 10
 sim_steps = 3600
-trials = 5
+trials = 1
 
 if __name__=='__main__':
     for sim_config in configs:
-        for scenario, weights in scenarios.items():
+        for scenario, weights in vote_scenarios.items():
             for input_method in input_methods:
                 for vote_type in vote_types:
                     calls = []
                     for i in range(trials):
+                        path = f'../runs/{vote_type}/{input_method}/'
+                        if scenario in pure_methods:
+                            path = f'../runs/pure/{scenario}'
                         if input_method=='binary':
                         # if scenario in pure_methods:
                             vote_weights = " ".join(str(x) for x in weights)
-                            call = f"python runner.py --sim_config {sim_config} --num_sim_steps {sim_steps} --seed {i} --eps_start 0 --eps_end 0 --lr 0.0005 --mode vote --agents_type learning --num_episodes 1 --vote_weights {vote_weights} --mfd False --scenario {scenario} --vote_type {vote_type} --path '../runs/{vote_type}/{input_method}/'"
+                            call = f"python runner.py --sim_config {sim_config} --num_sim_steps {sim_steps} --seed {i} --ID {i} --eps_start 0 --eps_end 0 --lr 0.0005 --mode vote --agents_type learning --num_episodes 1 --mfd False --total_points {total_points} --binary --scenario {scenario} --vote_type {vote_type} --path {path}"
                         else:  # cumulative voting
-                            call = f"python runner.py --sim_config {sim_config} --num_sim_steps {sim_steps} --seed {i} --eps_start 0 --eps_end 0 --lr 0.0005 --mode vote --agents_type learning --num_episodes 1 --mfd False --total_points {total_points} --scenario {scenario} --vote_type {vote_type} --path '../runs/{vote_type}/{input_method}/'"
+                            call = f"python runner.py --sim_config {sim_config} --num_sim_steps {sim_steps} --seed {i} --ID {i} --eps_start 0 --eps_end 0 --lr 0.0005 --mode vote --agents_type learning --num_episodes 1 --mfd False --total_points {total_points} --scenario {scenario} --vote_type {vote_type} --path {path}"
+                        
+                        if i==0: # replay
+                            call += ' --trajectory'
                         calls.append(call)
+                        if scenario in pure_methods:
+                            break
 
                     pycalls = "\n".join(calls)
                     os.system(f"""sbatch -n 8  --time=8:00:00 --wrap '{pycalls}'""")

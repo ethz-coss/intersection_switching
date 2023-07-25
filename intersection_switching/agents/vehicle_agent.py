@@ -22,6 +22,8 @@ class VehicleAgent:
         self.distance = 0
         self.total_rewards = []
         self.start_time = 0
+        self.alignments = []
+        self.dissatisfactions = []
         self.satisfactions = []
 
         n_actions = 2 # (binary choice?)
