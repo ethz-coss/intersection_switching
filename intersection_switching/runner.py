@@ -209,9 +209,15 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
                             normed_act = environ._agents_dict[agent_id].rescale_preferences(pref, _act)
                             actprob += weight*normed_act
                             # print(pref, _act, normed_act)
-                        act = np.argmax(actprob)
-                        raw_net.update({"reference" : act})
+                        if args.agents_type=='learning':
+                            act = np.argmax(actprob)
+                        else:
+                            act = environ._agents_dict[agent_id].choose_act(environ.eng, environ.time)
                         actions[agent_id] = act
+
+                        if isinstance(act, tuple):
+                            act = act[0]
+                        raw_net.update({"reference" : act})
                         # print(np.array(raw_net)==act)
                         environ.get_driver_satisfaction(agent_id, raw_net)
                         alignment = environ.get_driver_alignment(agent_id, raw_net)

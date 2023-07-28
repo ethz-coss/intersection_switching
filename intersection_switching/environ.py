@@ -14,6 +14,8 @@ from pettingzoo.utils.env import ParallelEnv, AECEnv
 from pettingzoo.utils import agent_selector
 from agents.vehicle_agent import VehicleAgent
 from agents.switch_agent import SwitchAgent 
+from agents.demand_agent import DemandAgent 
+from agents.fixed_agent import FixedAgent 
 
 class Environment(gym.Env):
     """
@@ -78,11 +80,18 @@ class Environment(gym.Env):
         # self.intersection_ids = ['intersection_0_0'] # single intersection only
         self.intersections = {}
         for intersection_id in self.intersection_ids:
-            self.intersections[intersection_id] = SwitchAgent(self, ID=intersection_id,
-                                                        in_roads=self.eng.get_intersection_in_roads(intersection_id),
-                                                        out_roads=self.eng.get_intersection_out_roads(intersection_id),
-                                                        lr=args.lr, batch_size=args.batch_size)
+            if self.agents_type=='demand':
+                AgentType = DemandAgent
+            elif self.agents_type=='fixed':
+                AgentType = FixedAgent
+            else: # self.agents_type=='learning':
+                AgentType = SwitchAgent
 
+            agent = AgentType(self, ID=intersection_id,
+                              in_roads=self.eng.get_intersection_in_roads(intersection_id),
+                              out_roads=self.eng.get_intersection_out_roads(intersection_id),
+                              lr=args.lr, batch_size=args.batch_size)
+            self.intersections[intersection_id] = agent
 
         self.agents = list(self.intersections.values())
         self.agent_ids = list(self.intersections.keys())
@@ -351,6 +360,10 @@ class Environment(gym.Env):
             elif scenario == 'waits':
                 group = "B"
                 points = [0, 0, total_points]
+
+            else: # catchall clause, probably external benchmark algorithm
+                points = self.rng.multinomial(total_points, np.ones(2) / 2)
+                points = [0] + list(points)
 
             preferences_dict[veh_id] = {pref: point for pref, point in zip(pref_types, points)}
             self.vehicles[veh_id].preference = preferences_dict[veh_id]  # Assign the preferences to each vehicle.
