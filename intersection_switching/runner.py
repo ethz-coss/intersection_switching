@@ -135,7 +135,8 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
     saved_model = None
     environ.best_epoch = 0
     rng_seed = args.seed
-    
+    MAX_GREEN = 240
+
     environ.eng.set_save_replay(open=False)
     environ.eng.set_random_seed(rng_seed)
 
@@ -165,6 +166,8 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
         else:
             environ.assign_driver_preferences(vehicle_ids, pref_types, total_points=total_points, scenario=scenario)
 
+        prev_acts = {agent_id: {'act_idx': -1,
+                                'start_time': 0} for agent_id in environ.agent_ids}
         while environ.time < num_sim_steps:
             # Dispatch the observations to the model to get the tuple of actions
 
@@ -178,9 +181,21 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
                     if tl.time_to_act:
                         act = policy.act(torch.FloatTensor(
                             obs[agent_id], device=device), epsilon=environ.eps)
+                        
                     if act is not None:
                         actions[agent_id] = act
 
+                        if ((act == prev_acts[agent_id]['act_idx']) and 
+                            ((environ.time - prev_acts[agent_id]['start_time']) > MAX_GREEN)):
+                            actprob = policy.act(torch.FloatTensor(
+                                            obs[agent_id], device=device), 
+                                            epsilon=0, # deterministic
+                                            as_probs=True)
+                            actprob = actprob.numpy().squeeze()
+                            act = np.argsort(actprob)[-2]
+                    if (actions[agent_id] != prev_acts[agent_id]['act_idx']):
+                        prev_acts[agent_id]['act_idx'] = act
+                        prev_acts[agent_id]['start_time'] = environ.time
 
             if args.mode=='vote':
                 point_voting = args.vote_weights is None
@@ -211,7 +226,13 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
                             # print(pref, _act, normed_act)
                         if args.agents_type=='learning':
                             act = np.argmax(actprob)
+                            # Safety check to prevent only giving green to single phase
+                            if ((act == prev_acts[agent_id]['act_idx']) and 
+                                ((environ.time - prev_acts[agent_id]['start_time']) > MAX_GREEN)):
+                                act = np.argsort(actprob)[-2]
+                                print(f'time: {environ.time}, id: {agent_id} FORCEING ACTION MAXGREEN')
                         else:
+                            # act can be a tuple here
                             act = environ._agents_dict[agent_id].choose_act(environ.eng, environ.time)
                         actions[agent_id] = act
 
@@ -224,7 +245,9 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
                         logger.objective_alignment.append(raw_net)
                         logger.vote_satisfaction.extend(alignment)
 
-
+                        if (actions[agent_id] != prev_acts[agent_id]['act_idx']):
+                            prev_acts[agent_id]['act_idx'] = act
+                            prev_acts[agent_id]['start_time'] = environ.time
             # Execute the actions
             next_obs, rewards, dones, info = environ.step(actions)
             # print(next_obs, rewards)

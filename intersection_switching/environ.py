@@ -46,7 +46,9 @@ class Environment(gym.Env):
         self.save_trajectory = args.trajectory
         self.trajectory = []
 
-        self.eng = cityflow.Engine(sim_config, thread_num=os.cpu_count())
+        cpu_count = int(os.environ.get('SLURM_NPROCS', os.cpu_count()))
+        print(f"num_cpu: { os.environ.get('SLURM_NPROCS', -1),  os.cpu_count()}")
+        self.eng = cityflow.Engine(sim_config, thread_num=cpu_count)
         self.ID = ID
         self.num_sim_steps = args.num_sim_steps
         self.update_freq = args.update_freq      # how often to update the network
@@ -389,13 +391,13 @@ class Environment(gym.Env):
     def assign_driver_preferences(self, vehicle_ids, pref_types, weights=None, total_points=None, scenario=None):
         if total_points and scenario:  # If point-based preference is enabled
             preferences_dict = self.distribute_points(vehicle_ids, pref_types, total_points, scenario)
-        else:
-            print("WARNING SHOULD NOT BE HAPPENING")
-            choice = self.rng.choice(pref_types, p=weights)
-            preferences_dict = {id: {i: int(i == choice) for i in pref_types} for id in vehicle_ids}
+        # else:
+            # print("WARNING SHOULD NOT BE HAPPENING")
+            # choice = self.rng.choice(pref_types, p=weights)
+            # preferences_dict = {id: {i: int(i == choice) for i in pref_types} for id in vehicle_ids}
 
-            for veh_id, preference in preferences_dict.items():
-                self.vehicles[veh_id].preference = preference
+            # for veh_id, preference in preferences_dict.items():
+            #     self.vehicles[veh_id].preference = preference
 
     def get_driver_satisfaction(self, agent_id, raw_net):
         lane_vehicles = self.lane_vehs
