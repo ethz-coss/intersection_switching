@@ -21,6 +21,11 @@ class SwitchAgent(Agent):
         """
         super().__init__(env, ID)
 
+        self.stops = []
+        self.unique_stops = []
+        self.waits = []
+        self.speeds = []
+
         # Needed for intersection switch only
         # self.clearing_phase = None
         # self.clearing_time = 0
@@ -45,6 +50,10 @@ class SwitchAgent(Agent):
 
         self.action_space = spaces.Discrete(self.n_actions)
 
+
+        self.action_queue = queue.Queue()
+        self.last_phase_time = {phase_id: 0 for phase_id, phase in self.phases.items() if phase_id!=self.clearing_phase.ID}
+
     def init_phases_vectors(self):
         """
         initialises vector representation of the phases
@@ -62,30 +71,28 @@ class SwitchAgent(Agent):
 
     def observe(self, vehs_distance):
         observations = self.phase.vector + self.get_vehicle_approach_states(vehs_distance)
-        # observations = self.phase.vector + self.get_in_lanes_veh_num(
-        #     vehs_distance) + self.get_out_lanes_veh_num()
         return np.array(observations)
 
     def get_vehicle_approach_states(self, vehs_distance):
         lane_vehicles = self.env.lane_vehs
         state_vec = []
         for lane_id in self.approach_lanes:
-            length = self.in_lanes_length[lane_id]
+            # length = self.in_lanes_length[lane_id]
             speeds = []
-            waiting_times = []
+            waits = []
             for veh_id in lane_vehicles[lane_id]:
                 vehicle = self.env.vehicles[veh_id]
                 speeds.append(self.env.veh_speeds[veh_id])
-                waiting_times.append(vehicle.wait)
-            density = len(lane_vehicles[lane_id]) * VEHLENGTH / length
+                waits.append(vehicle.wait)
+            # density = len(lane_vehicles[lane_id]) * VEHLENGTH / length
             ave_speed = np.mean(speeds or 0)
-            ave_wait = np.mean(waiting_times or 0)
+            ave_wait = np.mean(waits or 0)
             # state_vec += [density]
-            state_vec += [ave_speed, ave_wait]
+            # state_vec += [ave_speed, ave_wait]
             
-        density = self.get_in_lanes_veh_num(vehs_distance)
-        return state_vec + density
-        # return density
+        in_density = self.get_in_lanes_veh_num(vehs_distance)
+        out_density = self.get_out_lanes_veh_num()
+        return state_vec + in_density + out_density
 
     def get_out_lanes_veh_num(self):
         """
@@ -100,7 +107,6 @@ class SwitchAgent(Agent):
             for lane in lanes:
                 length = self.out_lanes_length[lane]
                 lanes_veh_num.append(lanes_count[lane] * VEHLENGTH / length)
-                # lanes_veh_num.append(lanes_count[lane])
         return lanes_veh_num
     
     def get_in_lanes_veh_num(self, vehs_distance):
@@ -141,14 +147,57 @@ class SwitchAgent(Agent):
         self.update_arr_dep_veh_num(lane_vehs, lanes_count)
         super().apply_action(eng, action, lane_vehs, lanes_count)
 
+    def measure(self):
+        lane_vehicles = self.env.lane_vehs
+        veh_speeds = self.env.veh_speeds
+        unique_stops = 0
+        stops = 0 # stopped vehicles
+        waiting_times = self.waits
+        for lane_id in self.approach_lanes:
+            length = self.in_lanes_length[lane_id]
+            for veh_id in lane_vehicles[lane_id]:
+                speed = veh_speeds[veh_id]
+                self.speeds.append(speed)
+                veh = self.env.vehicles[veh_id]
+                if speed <= 0.1:
+                    veh.wait += 1
+                    if veh.wait == 1:
+                        unique_stops += 1  # first stop
+                        veh.stops += 1
+                    if veh.wait >= 1:
+                        stops += 1
+                elif speed > 0.1 and veh.wait:
+                    waiting_times.append(veh.wait)
+                    veh.wait_times.append(veh.wait)
+                    veh.wait = 0
+        self.unique_stops.append(unique_stops)
+        self.stops.append(stops)
+        return unique_stops, waiting_times
+
+    def reset_measures(self):
+        self.stops = []
+        self.unique_stops = []
+        self.waits = []
+        self.speeds = []
+
     def get_reward(self, lanes_count, type='speed'):
         if type=='speed':
-            if self.env.speeds[-self.env.stops_idx:]:
-                return np.mean(self.env.speeds[-self.env.stops_idx:])
+            if self.speeds:
+                return np.mean(self.speeds)
             else:
                 return 0
-        if type=='stops':
-            return -np.sum(self.env.stops[-self.env.stops_idx:])
+        if 'stops' in type:
+            if 'unique' in type:
+                stops = self.unique_stops
+            elif 'global' in type:
+                stops = self.env.stops[-self.env.stops_idx:]
+            else:
+                stops = self.stops
+            if stops:
+                return -np.mean(stops)
+            else:
+                return 0
+            # return -np.mean(self.env.stops[-self.env.stops_idx:])
         if type=='delay':
             delays = []
             for veh_id, veh_data in self.env.vehicles.items():
@@ -158,11 +207,22 @@ class SwitchAgent(Agent):
                 delay *= 600 # convert to secs/600m
                 delays.append(delay)
             return -np.mean(delays)
-        if type=='wait':
-            waiting_times = []
-            for veh_id in self.env.vehicles.keys():
-                vehicle = self.env.vehicles[veh_id]
-                waiting_times.append(vehicle.wait)
+        if 'wait' in type:
+            if 'local' in type:
+                waiting_times = self.waits
+                lane_vehicles = self.env.lane_vehs
+                for lane_id in self.approach_lanes:
+                    for veh_id in lane_vehicles[lane_id]:
+                        veh = self.env.vehicles[veh_id]
+                        # if veh.wait >= 1:
+                        waiting_times.append(veh.wait)
+            else:
+                waiting_times = []
+                for veh_id in self.env.veh_speeds.keys():
+                    veh = self.env.vehicles[veh_id]
+                    if veh.wait >= 1:
+                        waiting_times.append(veh.wait)
+
             if waiting_times:
                 return -np.mean(waiting_times)
             else:
@@ -193,8 +253,20 @@ class SwitchAgent(Agent):
             return reward
 
     def rescale_preferences(self, pref, qvals):
-        alpha = 0.5
-        shift = qvals - qvals.max()
+        params = {'speed': {'mean': 5,
+                            'min': 0,
+                            'max': 11},
+                  'wait': {'mean': -0.74,
+                            'min': -4.9,
+                            'max': -0.56},
+                  'stops': {'mean': -13.2,
+                            'min': -55.6,
+                            'max': -4.4}}
+
+        alpha = 1
+        # shift = qvals - qvals.max()
+        shift = (qvals - params[pref]['max']) / (params[pref]['max'] - params[pref]['min'])
+
         return np.exp(alpha * shift)/ np.sum(np.exp(alpha*shift))
         # if pref=='speed':
         #     return qvals/(MAXSPEED * 5)

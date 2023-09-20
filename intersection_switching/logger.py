@@ -36,6 +36,7 @@ class Logger:
 
         config_dir, config_file = os.path.split(args.sim_config)
         scenario_name = os.path.basename(config_dir)
+        scenario_name = f"{scenario_name}_{config_file.split('.')[0]}"
         if args.n_vehs is None:
             n_vehs = None
             exp_name = f"{scenario_name}_{args.reward_type}"
@@ -82,7 +83,8 @@ class Logger:
         self.reward = 0
         for agent in environ.agents:
             self.reward += np.mean(agent.total_rewards)
-
+        self.reward /= len(environ.agents)
+        
         self.plot_rewards.append(self.reward)
         self.veh_count.append(environ.eng.get_finished_vehicle_count())
         self.travel_time.append(environ.eng.get_average_travel_time())
@@ -219,6 +221,9 @@ class Logger:
 
                 pickle.dump(self.driver_satisfaction, f) 
             
+            with open(os.path.join(self.log_path, "act_probs.pickle"), "wb") as f:
+                pickle.dump(self.act_probs, f) 
+
         if environ.agents_type in ['learning', 'hybrid', 'presslight', 'policy', 'denflow']:
             with open(os.path.join(self.log_path, "episode_rewards.pickle"), "wb") as f:
                 pickle.dump(self.plot_rewards, f)

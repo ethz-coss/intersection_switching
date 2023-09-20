@@ -224,6 +224,8 @@ class Agent:
         if self.action_type == "act":
             if type(action) is tuple:
                 action, self.green_time = action
+                if self.green_time is None:
+                    self.green_time = self.env.action_freq
                 self.chosen_phase = self.phases[action]
             else:
                 self.chosen_phase = self.phases[action]

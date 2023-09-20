@@ -1,54 +1,44 @@
 import os
+from shutil import which
 
-# low_balanced = [11, 11]
-# low_unbalanced = [11, 6]
+IS_SLURM = which('sbatch') is not None
 
-# medium_balanced = [22, 22]
-# medium_unbalanced = [22, 11]
-
-# high_balanced = [32, 32]
-# high_unbalanced = [32, 16]
-# traffic_conditions = [medium_balanced]#, low_unbalanced, medium_balanced, medium_unbalanced, high_balanced, high_unbalanced]
-
-# vote_speed = [1, 0, 0]
-# vote_stops = [0, 1, 0]
-# vote_wait = [0, 0, 1]
-#
-# vote_uniform_1 = [0.5, 0.5, 0]
-# vote_uniform_2 = [0.5, 0, 0.5]
-# vote_uniform_3 = [0, 0.5, 0.5]
-#
-# vote_quarter_1 = [0.75, 0.25, 0]
-# vote_quarter_2 = [0.75, 0, 0.25]
-# vote_quarter_3 = [0.25, 0, 0.75]
-# vote_quarter_4 = [0, 0.25, 0.75]
-# vote_quarter_5 = [0.25, 0.75, 0]
-# vote_quarter_6 = [0, 0.75, 0.25]
 
 vote_scenarios = {
     'bipolar': [0, 0.5, 0.5],
     'majority_extreme': [0, 0.2, 0.8],
     'random': [0, 0.5, 0.5],
     # 'stops': [0, 1, 0],
-    # 'waits': [0, 0, 1],
+    'unique_stops': [0, 1, 0],
+    # 'waits': [0, 0, 1], 
+    'localwait': [0, 0, 1],
     # 'demand': [0, 0.5, 0.5],
     # 'fixed': [0, 0.5, 0.5],
 }
 
 
-pure_methods = ['stops', 'waits']
+pure_methods = [
+                # 'stops', 
+                # 'waits', 
+                'localwait', 
+                'unique_stops'
+                ]
 
-baseline = ['demand', 'fixed']
+# baseline = ['demand', 'fixed']
+baseline = ['fixed']
 input_methods = ['binary', 'cumulative']
-configs = ['../scenarios/hangzhou/1.config', '../scenarios/ny16/1.config']
+# configs = ['../scenarios/hangzhou/1.config', '../scenarios/ny16/1.config']
+configs = ['../scenarios/hangzhou/1.config',
+            '../scenarios/hangzhou/2.config']
 vote_types = ['proportional', 'majority']
 
 total_points = 10
 sim_steps = 3600
-trials = 1
+trials = 10
 
 if __name__=='__main__':
     for sim_config in configs:
+        override = False
         for scenario, weights in vote_scenarios.items():
             for input_method in input_methods:
                 for vote_type in vote_types:
@@ -56,13 +46,13 @@ if __name__=='__main__':
                     agent_type = 'learning'
                     breakflag = False # do only one of pure and baselines
                     for i in range(trials):
-                        path = f'../runs/{vote_type}/{input_method}/'
+                        path = f'../runs/{vote_type}/{input_method}{"_override" if override else ""}/'
                         if scenario in pure_methods:
                             path = f'../runs/pure/{scenario}'
-                            breakflag = True
+                            # breakflag = True
                         if scenario in baseline:
                             path = f'../runs/baseline/{scenario}'
-                            breakflag = True
+                            # breakflag = True
                             agent_type = scenario
                         if input_method=='binary':
                             vote_weights = " ".join(str(x) for x in weights)
@@ -70,14 +60,21 @@ if __name__=='__main__':
                         else:  # cumulative voting
                             call = f"python runner.py --sim_config {sim_config} --num_sim_steps {sim_steps} --seed {i} --ID {i} --eps_start 0 --eps_end 0 --lr 0.0005 --mode vote --agents_type {agent_type} --num_episodes 1 --mfd False --total_points {total_points} --scenario {scenario} --vote_type {vote_type} --path {path}"
                         
+                        if override:
+                            call += ' --override'
                         if i==0: # replay
                             call += ' --trajectory --replay'
                         calls.append(call)
                         if breakflag:
                             break
 
-                    pycalls = "\n".join(calls)
-                    os.system(f"""sbatch -n 8  --time=8:00:00 --wrap '{pycalls}'""")
+                    if IS_SLURM:
+                        pycalls = "\n".join(calls)
+                        # print(pycalls)
+                        os.system(f"""sbatch -n 4  --mem-per-cpu=2G --time=4:00:00 --wrap '{pycalls}'""")
+                    else:
+                        pycalls = "&".join(calls)
+                        os.system(pycalls)
                     if breakflag:
                         break
                 if breakflag:

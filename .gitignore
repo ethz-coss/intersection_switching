@@ -1,10 +1,12 @@
 slurm*.out
 figs/*
 runs/*
+OLD/*
 models/*
 saved_models/*
 majority_100/*
 proportional_100/*
+*.tar*
 *.pickle
 *.dill
 logs.txt

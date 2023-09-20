@@ -161,8 +161,8 @@ class Environment(gym.Env):
         self._apply_actions(actions)
         self.sub_steps()
 
-        rewards = self._compute_rewards()
         observations = self._get_obs()
+        rewards = self._compute_rewards()
         info = self.infos
         dones = self._compute_dones()
 
@@ -176,7 +176,6 @@ class Environment(gym.Env):
             self.eng.next_step()
             self.time += 1
 
-            stops = 0
             self.veh_speeds = self.eng.get_vehicle_speed()
             self.lane_vehs = self.eng.get_lane_vehicles()
             self.lanes_count = self.eng.get_lane_vehicle_count()
@@ -207,24 +206,18 @@ class Environment(gym.Env):
                 lane.update_flow_data(self.eng, self.lane_vehs)
                 lane.update_speeds(self, self.lane_vehs[lane_id], self.veh_speeds)
 
-            for veh_id, speed in self.veh_speeds.items():
-                veh = self.vehicles[veh_id]
-                if speed <= 0.1:
-                    veh.wait += 1
-                    if veh.wait == 1:
-                        stops += 1  # first stop
-                        veh.stops += 1
-                elif speed > 0.1 and veh.wait:
-                    self.waiting_times.append(veh.wait)
-                    veh.wait_times.append(veh.wait)
-                    veh.wait = 0
+            stops = 0
+            for tl_id, tl in self.intersections.items():
+                tl_stops, tl_waits = tl.measure()
+                stops += tl_stops
+                self.waiting_times.extend(tl_waits)
             self.speeds.append(np.mean(list(self.veh_speeds.values())))
             self.stops.append(stops)
             self.stops_idx += 1
             self.speeds_idx += 1
 
-            if self.time % self.update_freq == 0:  # TODO: move outside to training
-                self.eps = max(self.eps-self.eps_decay, self.eps_end)
+            # if self.time % self.update_freq == 0:  # TODO: move outside to training
+            #     self.eps = max(self.eps-self.eps_decay, self.eps_end)
 
             for intersection in self.intersections.values():
                 intersection.update()
@@ -251,7 +244,12 @@ class Environment(gym.Env):
         return dones
 
     def _compute_rewards(self):
-        self.rewards.update({tl.ID: tl.calculate_reward(self.lanes_count, type=self.reward_type) for tl in self.intersections.values() if tl.time_to_act})
+        rew = {}
+        for tl in self.intersections.values():
+            if tl.time_to_act:
+                rew[tl.ID] = tl.calculate_reward(self.lanes_count, type=self.reward_type)
+                tl.reset_measures()
+        self.rewards.update(rew)
         return {ts: self.rewards[ts] for ts in self.rewards.keys() if self.intersections[ts].time_to_act}
 
     def observe(self, agent):
@@ -352,19 +350,19 @@ class Environment(gym.Env):
 
             elif scenario == 'random':  # Random Distribution
                 group = "B"
-                points = self.rng.multinomial(total_points, np.ones(2) / 2)
+                points = self.rng.multinomial(total_points*100, np.ones(2) / 2)/100
                 points = [0] + list(points)
 
-            elif scenario == 'stops':
+            elif 'stops' in scenario:
                 group = "B"
                 points = [0, total_points, 0]
 
-            elif scenario == 'waits':
+            elif 'waits' in scenario:
                 group = "B"
                 points = [0, 0, total_points]
 
             else: # catchall clause, probably external benchmark algorithm
-                points = self.rng.multinomial(total_points, np.ones(2) / 2)
+                points = self.rng.multinomial(total_points*100, np.ones(2) / 2)/100
                 points = [0] + list(points)
 
             preferences_dict[veh_id] = {pref: point for pref, point in zip(pref_types, points)}
@@ -379,12 +377,14 @@ class Environment(gym.Env):
         for tl_id, intersection in self.intersections.items():
             for lane_id in intersection.approach_lanes:
                 for veh_id in lane_vehicles[lane_id]:
-                    max_points = max(self.vehicles[veh_id].preference.values())
+                    prefvals = self.vehicles[veh_id].preference.values()
+                    max_points = max(prefvals)
+                    tiebreaker = random.choice([k for k,v in self.vehicles[veh_id].preference.items() if v==max_points])
                     # Sum up the scores based on the preferences of the vehicles.
                     for pref_type, _points in self.vehicles[veh_id].preference.items():
                         points = _points
                         if binary: # binarizes to total_points
-                            points = total_points*(_points==max_points)
+                            points = total_points*(_points==max_points and pref_type==tiebreaker)
                         votes[tl_id][pref_type] += points
         return votes
 
