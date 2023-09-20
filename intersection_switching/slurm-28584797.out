@@ -1,0 +1,21 @@
+/cluster/apps/nss/gcc-6.3.0/python/3.8.5/x86_64/lib64/python3.8/site-packages/matplotlib/__init__.py:152: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+  if LooseVersion(module.__version__) < minver:
+/cluster/apps/nss/gcc-6.3.0/python/3.8.5/x86_64/lib64/python3.8/site-packages/setuptools/_distutils/version.py:345: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+  other = LooseVersion(other)
+saving to ../saved_models/-1_-1_localwait(5)
+actions: 5
+episode  0
+Traceback (most recent call last):
+  File "runner.py", line 297, in <module>
+    run_exp(environ, args, num_episodes, num_sim_steps, logger, policies[0], policy_map, detailed_log)
+  File "runner.py", line 198, in run_exp
+    next_obs, rewards, dones, info = environ.step(actions)
+  File "/cluster/home/mkorecki/intersection_switching/intersection_switching/environ.py", line 145, in step
+    self._apply_actions(actions)
+  File "/cluster/home/mkorecki/intersection_switching/intersection_switching/environ.py", line 213, in _apply_actions
+    intersection.apply_action(self.eng, actions[intersection.ID],
+  File "/cluster/home/mkorecki/intersection_switching/intersection_switching/agents/switch_agent.py", line 145, in apply_action
+    super().apply_action(eng, action, lane_vehs, lanes_count)
+  File "/cluster/home/mkorecki/intersection_switching/intersection_switching/agents/agent.py", line 229, in apply_action
+    self.chosen_phase = self.phases[action]
+KeyError: 1

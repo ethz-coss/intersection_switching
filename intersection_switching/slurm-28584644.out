@@ -1,0 +1,15 @@
+/cluster/apps/nss/gcc-6.3.0/python/3.8.5/x86_64/lib64/python3.8/site-packages/matplotlib/__init__.py:152: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+  if LooseVersion(module.__version__) < minver:
+/cluster/apps/nss/gcc-6.3.0/python/3.8.5/x86_64/lib64/python3.8/site-packages/setuptools/_distutils/version.py:345: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+  other = LooseVersion(other)
+saving to ../saved_models/-1_-1_unique_stops(4)
+Traceback (most recent call last):
+  File "runner.py", line 266, in <module>
+    environ = Environment(args, reward_type=args.reward_type)
+  File "/cluster/home/mkorecki/intersection_switching/intersection_switching/environ.py", line 77, in __init__
+    self.intersections[intersection_id] = SwitchAgent(self, ID=intersection_id,
+  File "/cluster/home/mkorecki/intersection_switching/intersection_switching/agents/switch_agent.py", line 39, in __init__
+    nstates = len(self.get_vehicle_approach_states({}))
+  File "/cluster/home/mkorecki/intersection_switching/intersection_switching/agents/switch_agent.py", line 75, in get_vehicle_approach_states
+    vehicle = self.env.vehicles[veh_id]
+KeyError: 'flow_2056_0_shadow'
