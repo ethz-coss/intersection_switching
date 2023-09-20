@@ -196,7 +196,7 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
             if args.mode=='vote':
                 point_voting = args.vote_weights is None
                 votes = environ.vote_drivers(args.total_points, point_voting, args.binary)
-                actions = {}
+            # actions = {}
                 for agent_id in environ.agent_ids:
                     tl_agent = environ.intersections[agent_id]
                     if tl_agent.time_to_act:
