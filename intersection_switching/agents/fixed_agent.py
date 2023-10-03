@@ -1,13 +1,12 @@
 from engine.cityflow.intersection import Phase
 from agents.switch_agent import SwitchAgent
-import numpy as np
 
 class FixedAgent(SwitchAgent):
 
     def __init__(self, env, ID='', **kwargs):
         super().__init__(env, ID, **kwargs)
         self.agents_type = 'fixed'
-        self.phase = self.phases[np.random.randint(1, 8)]
+
 
     def choose_act(self, eng, time):
         loop_start_action_id = self.phase.ID
@@ -26,6 +25,9 @@ class FixedAgent(SwitchAgent):
             # print(f'time: {self.env.time} ID: {self.ID} phase: {phaseID}, green: {green_time}')
         return phaseID, green_time
       
+    def reset(self):
+        super().reset()
+        self.phase = self.phases[self.env.rng.integers(1, 8, endpoint=True)]
 
     # def observe(self, veh_distance):
     #     return None
