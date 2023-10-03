@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import torch
 import pickle
 import dill
+import utils
 # from network_parser import get_network
 
 class Logger:
@@ -104,7 +105,7 @@ class Logger:
             output[road_id] = {}
             density = np.vstack(road_data['density'])
             speed = np.vstack(road_data['speed'])
-            output[road_id]['speed'] = np.nansum(speed*density, axis=0)/np.nansum(density, axis=0)
+            output[road_id]['speed'] = utils.div0(np.nansum(speed*density, axis=0), np.nansum(density, axis=0))
             output[road_id]['density'] = np.nanmean(density, axis=0)
 
         self.mfd = output
