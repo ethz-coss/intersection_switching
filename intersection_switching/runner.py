@@ -196,7 +196,7 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
             if args.mode=='vote':
                 point_voting = args.vote_weights is None
                 votes = environ.vote_drivers(args.total_points, point_voting, args.binary)
-            # actions = {}
+                actions = {}
                 for agent_id in environ.agent_ids:
                     tl_agent = environ.intersections[agent_id]
                     if tl_agent.time_to_act:
@@ -223,6 +223,7 @@ def run_exp(environ, args, num_episodes, num_sim_steps, logger,
                                 weight = 1*(pref=='wait')
 
                             normed_act = tl_agent.rescale_preferences(pref, _act)
+                            assert np.isfinite(normed_act).all()
                             actprob += weight*normed_act
                             # print(pref, _act, normed_act)
                         green_time = None
