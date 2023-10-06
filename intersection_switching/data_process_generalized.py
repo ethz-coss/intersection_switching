@@ -6,31 +6,10 @@ from run_vote import vote_scenarios, pure_methods, baseline
 from radar_plot2 import ComplexRadar, format_cfg
 import itertools
 import pickle
-
-
-traffic_conditions = [[-1,-1]]
+import utils
 
 pref_types = ['speed', 'stops', 'wait']
 
-vote_speed = [1.0, 0.0, 0.0]
-vote_stops = [0.0, 1.0, 0.0]
-vote_wait = [0.0, 0.0, 1.0]
-
-vote_uniform_1 = [0.5, 0.5, 0.0]
-vote_uniform_2 = [0.5, 0.0, 0.5]
-vote_uniform_3 = [0.0, 0.5, 0.5]
-
-vote_quarter_1 = [0.75, 0.25, 0.0]
-vote_quarter_2 = [0.75, 0.0, 0.25]
-vote_quarter_3 = [0.25, 0.0, 0.75]
-vote_quarter_4 = [0.0, 0.25, 0.75]
-vote_quarter_5 = [0.25, 0.75, 0.0]
-vote_quarter_6 = [0.0, 0.75, 0.25]
-
-# vote_types = [vote_speed, vote_stops, vote_wait, vote_uniform_1, vote_uniform_2, vote_uniform_3]#, vote_quarter_1, vote_quarter_2, vote_quarter_3, vote_quarter_4, vote_quarter_5, vote_quarter_6]
-
-# vote_types = [vote_uniform_1, vote_uniform_2, vote_uniform_3]
-# vote_types = [vote_stops, vote_wait, vote_uniform_3]
 vote_scenarios = list(vote_scenarios.keys())
 vote_inputs = ['binary','cumulative']
 
@@ -39,7 +18,7 @@ vote_types = ["proportional", "majority"]
 # categories = ['Speed', 'Number of Stops', 'Wait Time']
 # categories = [*categories, categories[0]]
 
-scenarios = ['hangzhou','ny16']
+scenarios = ['hangzhou_1','hangzhou_2']
 all_data = {}
 all_names = {}
 
@@ -51,23 +30,21 @@ def process_data(path):
     with open(speeds_path, "rb") as f:
         speeds = pickle.load(f)
 
-    avg_speed = np.mean([np.mean(speeds[x]) for x in speeds.keys()])
-    var_speed = np.std(([np.mean(speeds[x]) for x in speeds.keys()]))
+    veh_speed = [np.mean(speeds[x]) for x in speeds.keys()]
 
     with open(stops_path, "rb") as f:
         stops = pickle.load(f)
 
-    avg_stops = np.mean([np.mean(stops[x]) for x in stops.keys()])
-    var_stops = np.std(([np.mean(stops[x]) for x in stops.keys()]))
+    veh_stops = [np.mean(stops[x]) for x in stops.keys()]
 
     with open(wait_path, "rb") as f:
         wait = pickle.load(f)
 
     wait = {k:v if v else [0] for k,v in wait.items()}
 
-    avg_wait = np.mean([np.mean(wait[x]) for x in wait.keys()])
-    var_wait = np.std(([np.mean(wait[x]) for x in wait.keys()]))
-    return avg_wait, avg_stops, avg_speed
+    veh_wait = [np.mean(wait[x]) for x in wait.keys()]
+
+    return veh_wait, veh_stops, veh_speed
 
 def rescale(d, ranges):
     _ranges = [*ranges, ranges[0]]
@@ -78,52 +55,70 @@ def rescale(d, ranges):
         new_data.append(val)
     return new_data
 
-# for (scenario, vote_scenario) in itertools.product(scenarios, vote_scenarios):
-#     data = []
-#     names = []
-#     for vote_type in vote_types:
-#         for vote_input in vote_inputs:
-#             for j, traffic in enumerate(traffic_conditions):
+data_dict = []
+for (scenario, vote_scenario) in itertools.product(scenarios, vote_scenarios):
+    if vote_scenario in pure_methods+baseline:
+        continue
+    data = []
+    names = []
+    for vote_type in vote_types:
+        for vote_input in vote_inputs:
+                vote = vote_scenario
+                avg_total_waits = []
+                avg_total_stops = []
+                avg_total_speeds = []
+                for i in range(10):
+                    if type(vote)==list:
+                        path = f"../runs/{vote_type}/{vote_input}/{scenario}_{'_'.join(map(str,vote))}"
+                    else:
+                        path = f"../runs/{vote_type}/{vote_input}/{scenario}_{vote}"
+                    # if i!=0:
+                    path += f"({i})"
 
-#                 vote = vote_scenario
-#                 avg_total_waits = []
-#                 avg_total_stops = []
-#                 avg_total_speeds = []
-#                 for i in range(50):
-#                     if type(vote)==list:
-#                         path = f"../runs/{vote_type}/{vote_input}/{scenario}_{'_'.join(map(str,vote))}"
-#                     else:
-#                         path = f"../runs/{vote_type}/{vote_input}/{scenario}_{vote}"
-#                     if i!=0:
-#                         path += f"({i})"
+                    try:
+                        veh_wait, veh_stops, veh_speed = process_data(path)
+                    except FileNotFoundError:
+                        print('FILE MISSING:', path)
+                        continue
 
-#                     try:
-#                         avg_wait, avg_stops, avg_speed = process_data(path)
-#                     except FileNotFoundError:
-#                         print('FILE MISSING:', path)
-#                         continue
-#                     avg_total_waits.append(avg_wait)
-#                     avg_total_stops.append(avg_stops)
-#                     avg_total_speeds.append(avg_speed)
+                    avg_wait, avg_stops, avg_speed = list(map(np.mean, [veh_wait, veh_stops, veh_speed]))
+                    avg_total_waits.append(avg_wait)
+                    avg_total_stops.append(avg_stops)
+                    avg_total_speeds.append(avg_speed)
 
 
-#                 result = [np.mean(avg_total_speeds), np.mean(avg_total_stops), np.mean(avg_total_waits)]
-#                 result = [*result, result[0]]
-#                 data.append(result)
+                    data_dict.append({
+                        'speeds': avg_speed,
+                        'stops': avg_stops,
+                        'wait': avg_wait,
+                        'raw_speeds': veh_speed,
+                        'raw_stops': veh_stops,
+                        'raw_wait': veh_wait,
+                        'vote_type': vote_type,
+                        'vote_input': vote_input,
+                        'trial': i,
+                        'name': f"{vote_input} + {vote_type}",
+                        'vote_scenario':vote_scenario,
+                        'scenario': scenario
+                    })
 
-#                 # if type(vote)==list:
-#                 #     if vote == [0.0, 1.0, 0.0]:
-#                 #         name = "Stops"
-#                 #     elif vote == [0.0, 0.0, 1.0]:
-#                 #         name = "Wait Times"
-#                 # else:
-#                 #     name = vote
-#                 name = f"{vote_input} + {vote_type}"
-#                 names.append(name)
+                result = [np.mean(avg_total_speeds), np.mean(avg_total_stops), np.mean(avg_total_waits)]
+                result = [*result, result[0]]
+                data.append(result)
+
+                # if type(vote)==list:
+                #     if vote == [0.0, 1.0, 0.0]:
+                #         name = "Stops"
+                #     elif vote == [0.0, 0.0, 1.0]:
+                #         name = "Wait Times"
+                # else:
+                #     name = vote
+                name = f"{vote_input} + {vote_type}"
+                names.append(name)
                 
-#     key = f"{scenario}_{vote_scenario}"
-#     all_data.update({key:data})
-#     all_names.update({key:names})
+    key = f"{scenario}_{vote_scenario}"
+    all_data.update({key:data})
+    all_names.update({key:names})
 
 
 
@@ -133,16 +128,14 @@ def rescale(d, ranges):
 #     pickle.dump(all_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
-## Plotting happens here
+# ## Plotting happens here
 
-with open('all_names.pickle', 'rb') as handle:
-    all_names = pickle.load(handle)
-with open('all_data.pickle', 'rb') as handle:
-    all_data = pickle.load(handle)
+# with open('all_names.pickle', 'rb') as handle:
+#     all_names = pickle.load(handle)
+# with open('all_data.pickle', 'rb') as handle:
+#     all_data = pickle.load(handle)
 
 
-pure_methods = ['stops', 'waits']
-baseline = ['demand', 'fixed']
 for scenario in scenarios:
     data = []
     names = []
@@ -150,20 +143,43 @@ for scenario in scenarios:
         prefix = ''
         if method in pure_methods:
             prefix = 'pure'
+            num = 10
         elif method in baseline:
             prefix = 'baseline'
-        path = f"../runs/{prefix}/{method}/{scenario}_{method}(0)"
+            num = 10
 
+        avg_total_waits = []
+        avg_total_stops = []
+        avg_total_speeds = []
+        for i in range(num):
+            path = f"../runs/{prefix}/{method}/{scenario}_{method}({i})"
 
-        try:
-            avg_wait, avg_stops, avg_speed = process_data(path)
-        except FileNotFoundError:
-            print('FILE MISSING:', path)
-            continue
+            try:
+                veh_wait, veh_stops, veh_speed = process_data(path)
+            except FileNotFoundError:
+                print('BASELINE FILES MISSING:', path)
+                continue
 
+            avg_wait, avg_stops, avg_speed = list(map(np.mean, [veh_wait, veh_stops, veh_speed]))
+            avg_total_waits.append(avg_wait)
+            avg_total_stops.append(avg_stops)
+            avg_total_speeds.append(avg_speed)
+            data_dict.append({
+                'speeds': avg_speed,
+                'stops': avg_stops,
+                'wait': avg_wait,
+                'raw_speeds': veh_speed,
+                'raw_stops': veh_stops,
+                'raw_wait': veh_wait,
+                'vote_type': None,
+                'vote_input': None,
+                'trial': i,
+                'name': f"{method}",
+                'vote_scenario':None,
+                'scenario': scenario
+            })
 
-
-        result = [avg_speed, avg_stops, avg_wait]
+        result = [np.mean(avg_total_speeds), np.mean(avg_total_stops), np.mean(avg_total_waits)]
         result = [*result, result[0]]
         data.append(result)
 
@@ -194,7 +210,7 @@ for_df = []
 for i, scenario in enumerate(scenarios):
 
     fig = plt.figure(figsize=(6,2.5), dpi=300)
-    subfigs = fig.subfigures(1, len(vote_scenarios))
+    subfigs = fig.subfigures(1, sum([0 if vote_scenario in pure_methods+baseline else 1 for vote_scenario in vote_scenarios]))
     
     ## set bounds
     scenario_key_filter = [key for key in all_data.keys() if scenario in key]
@@ -237,7 +253,7 @@ for i, scenario in enumerate(scenarios):
         for_df.append({'area': sum(dd[:-1]),
                         'method': f'pure_{name}',
                         'scenario': sc_title})
-        pure_radar.plot(d, label=name, color=colors[k+5])
+        pure_radar.plot(d, label=utils.NAME_MAPPER.get(name, name), color=colors[k+5])
         pure_radar.fill(d, alpha=0.1, color=colors[k+5])
 
 
@@ -310,4 +326,4 @@ h,l = g.axes[0,i].get_legend_handles_labels()
 g.fig.legend(h, l, loc='lower center', bbox_to_anchor=(0.5, 1.0), ncols=3)
 g.set_axis_labels("voting scenario", "total objective score")
 
-g.fig.savefig('../figs/scalar_plot.pdf', bbox_inches='tight')
+# g.fig.savefig('../figs/scalar_plot.pdf', bbox_inches='tight')

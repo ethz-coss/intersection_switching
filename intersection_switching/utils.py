@@ -14,6 +14,11 @@ DEFAULT_VEHICLE = {
       "headwayTime": 1.5
     }
 
+NAME_MAPPER = {
+    "localwait": "wait",
+    "unique_stops": "stops"
+}
+
 def div0(a,b):
     return np.divide(a, b, out=np.zeros_like(a), where=b!=0)
     
