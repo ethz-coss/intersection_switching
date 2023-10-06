@@ -37,11 +37,14 @@ class Agent:
         self.init_phases(self.env.eng)
 
         self.in_lanes = [x.in_lanes for x in self.movements.values()]
-        self.in_lanes = set([x for sublist in self.in_lanes for x in sublist])
+        self.in_lanes = list(set([x for sublist in self.in_lanes for x in sublist]))
 
         self.out_lanes = [x.out_lanes for x in self.movements.values()]
-        self.out_lanes = set(
-            [x for sublist in self.out_lanes for x in sublist])
+        self.out_lanes = list(set(
+            [x for sublist in self.out_lanes for x in sublist]))
+
+        self.in_lanes.sort(key=lambda x: (x[-3], x[-1])) # sort by road direction then lane id
+        self.out_lanes.sort(key=lambda x: (x[-3], x[-1]))
 
         self.density = []
 
@@ -186,6 +189,10 @@ class Agent:
         self.next_act_time = 0
         self.last_act_time = -1
         self.action_type = 'act'
+        self.reset_measures()
+
+    def reset_measures(self):
+        pass
 
     def update_priority_idx(self, time):
         """

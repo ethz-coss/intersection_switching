@@ -375,7 +375,7 @@ class Environment(gym.Env):
 
         lane_vehicles = self.lane_vehs
         for tl_id, intersection in self.intersections.items():
-            for lane_id in intersection.approach_lanes:
+            for lane_id in intersection.in_lanes:
                 for veh_id in lane_vehicles[lane_id]:
                     prefvals = self.vehicles[veh_id].preference.values()
                     max_points = max(prefvals)
@@ -402,7 +402,7 @@ class Environment(gym.Env):
     def get_driver_satisfaction(self, agent_id, raw_net):
         lane_vehicles = self.lane_vehs
         act_idx = raw_net["reference"]
-        for lane_id in self.intersections[agent_id].approach_lanes:
+        for lane_id in self.intersections[agent_id].in_lanes:
             for veh_id in lane_vehicles[lane_id]:
                 score = 0
                 score_denom = 0
@@ -425,7 +425,7 @@ class Environment(gym.Env):
     def get_driver_alignment(self, agent_id, raw_net):
         intersection_alignments = []
         lane_vehicles = self.lane_vehs
-        for lane_id in self.intersections[agent_id].approach_lanes:
+        for lane_id in self.intersections[agent_id].in_lanes:
             for veh_id in lane_vehicles[lane_id]:
                 score = 0
                 for pref_type, points in self.vehicles[veh_id].preference.items():
