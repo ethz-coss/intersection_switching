@@ -3,8 +3,8 @@ import numpy as np
 import textwrap
 
 format_cfg = {
-    'rad_ln_args': {'visible':False},
-    'outer_ring': {'visible':False},
+    'rad_ln_args': {'visible':True},
+    'outer_ring': {'visible':True},
     'rgrid_tick_lbls_args': {'fontsize':6},
     'theta_tick_lbls': {'fontsize':6},
     'theta_tick_lbls_pad':0
@@ -71,7 +71,7 @@ class ComplexRadar():
         
         # Ensure clockwise rotation (first variable at the top N)
         for ax in axes:
-            ax.set_theta_zero_location('E')
+            ax.set_theta_zero_location('N')
             ax.set_theta_direction(1)
             ax.set_axisbelow(True)
         
@@ -135,8 +135,12 @@ class ComplexRadar():
         self.ax.set_xticklabels(labels, **self.format_cfg['theta_tick_lbls'])
         
         for t,a in zip(self.ax.get_xticklabels(),angles):
+            x,y = t.get_position()
+            t.set_in_layout(True)
             if a == 0:
-                t.set_ha('center')
+                t.set_ha('right')
+                t.set_va('bottom')
+                # t.set(x=x-1, y=y-0.15)
             elif a > 0 and a < 180:
                 t.set_ha('left')
             elif a == 180:
@@ -173,6 +177,9 @@ class ComplexRadar():
         """Shows a legend"""
         self.ax1.legend(*args, **kwargs)
     
+    def get_legend_handles_labels(self, *args, **kwargs):
+        return self.ax1.get_legend_handles_labels(*args, **kwargs)
+
     def set_title(self, title, pad=25, **kwargs):
         """Set a title"""
         self.ax.set_title(title,pad=pad, **kwargs)
