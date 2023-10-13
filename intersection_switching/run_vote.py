@@ -34,7 +34,7 @@ vote_types = ['proportional', 'majority']
 
 total_points = 10
 sim_steps = 3600
-trials = 10
+trials = 50
 
 if __name__=='__main__':
     for sim_config in configs:

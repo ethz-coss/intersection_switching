@@ -444,10 +444,9 @@ vote_scenarios = ['bipolar', 'random', 'majority_extreme']
 vote_inputs = ['binary', 'cumulative']
 vote_types = ["proportional", "majority"]
 
+all_sats = pd.DataFrame(columns=["Satisfaction", "VoteScenario", "Aggregation", "VoteInput"])
 
 for group in ["A","B"]:
-    group = None ## Toggle to combine the ridge plots
-    all_sats = pd.DataFrame(columns=["Satisfaction", "VoteScenario", "Aggregation", "VoteInput"])
     for scenario in scenarios:
         for vote_scenario in vote_scenarios:
             for aggregation in vote_types:
@@ -462,9 +461,8 @@ for group in ["A","B"]:
                             if os.path.isfile(satisfaction_path):
                                 with open(satisfaction_path, "rb") as f:
                                     _sats = pickle.load(f)
-
-                                    if group is not None:
-                                        sats = _sats[group]
+                                    if (group is not None) and (len(_sats.keys())>1):
+                                        sats = [i for i in _sats[group] if ~np.isnan(i)]
                                     else:
                                         sats = [i for x in _sats.values() for i in x] # dictionary of two groups
                                         sats = [x for x in sats if ~np.isnan(x)] # handle nan votes
@@ -474,12 +472,10 @@ for group in ["A","B"]:
                                     sats_df["Aggregation"] = aggregation
                                     sats_df["VoteInput"] = vote_input
                                     sats_df["VoteCombination"] = vote_input + " + " + aggregation
+                                    sats_df['group'] = group
                                     if override:
                                         sats_df["VoteCombination"] = 'pure wait'
-
-                                    # sats_df["Override"] = override
-
-                                    all_sats = pd.concat([all_sats, sats_df])
+                                    all_sats = pd.concat([all_sats, sats_df]).reset_index(drop=True)
                             break
     print(all_sats.head())
 
@@ -490,42 +486,48 @@ for group in ["A","B"]:
 
     overlap = 1
 
+all_sats.to_csv('alignments.csv', index=False)
+
+# LOAD FROM HERE
+all_sats = pd.read_csv('alignments.csv')
 
 
-    for scenario in scenarios:
-        fig = plt.figure(figsize=(6,4), dpi=300)
-        subfigs = fig.subfigures(1, len(vote_scenarios))
+# group = None
 
-        for i, vote_scenario in enumerate(vote_scenarios):
-            axes = subfigs[i].subplots(all_sats["VoteCombination"].unique().size,1)
-            axes = axes.flatten()
+# for scenario in scenarios:
+#     fig = plt.figure(figsize=(6,4), dpi=300)
+#     subfigs = fig.subfigures(1, len(vote_scenarios))
 
-            use_ylabels = False
-            if i==0:
-                use_ylabels = True
-            filtered_data = all_sats[(all_sats['VoteScenario'] == vote_scenario) & (all_sats['Scenario'] == scenario)]
-            if vote_scenario=='majority_extreme':
-                vote_scenario = "committed minority"
-            _, _axes = joyplot(filtered_data,
-                                    by="VoteCombination",
-                                    column="Satisfaction",
-                                    #   figsize=(10,5),
-                                    overlap=overlap,
-                                    ax=axes,
-                                    colormap=ListedColormap(sns.color_palette('pastel', n_colors=3)),
-                                    # colormap=plt.cm.YlGnBu,
-                                    ylabels=use_ylabels,
-                                    #   title=f'Vote scenario: {vote_scenario}, {scenario}',
-                                    title=f'{vote_scenario}',
-                                    medians=False,
-                                    #   x_range=[all_sats['Satisfaction'].min(), all_sats['Satisfaction'].max()]
-                                    x_range=[0,1]
-                                    )
+#     for i, vote_scenario in enumerate(vote_scenarios):
+#         axes = subfigs[i].subplots(all_sats["VoteCombination"].unique().size,1)
+#         axes = axes.flatten()
 
-        h_pad = 5 + (- 5*(1 + overlap))
-        fig.tight_layout(h_pad=h_pad)
-        if group is not None:
-            fig.savefig(f"{plots_directory}/{scenario}_ridge_{group}.pdf", bbox_inches="tight")
-        else:
-            fig.savefig(f"{plots_directory}/{scenario}_ridge.pdf", bbox_inches="tight")
-print(all_sats.groupby(['Scenario', 'VoteScenario','VoteCombination']).agg(['mean', 'std']).to_latex())
+#         use_ylabels = False
+#         if i==0:
+#             use_ylabels = True
+#         filtered_data = all_sats[(all_sats['VoteScenario'] == vote_scenario) & (all_sats['Scenario'] == scenario)]
+#         if vote_scenario=='majority_extreme':
+#             vote_scenario = "committed minority"
+#         _, _axes = joyplot(filtered_data,
+#                                 by="VoteCombination",
+#                                 column="Satisfaction",
+#                                 #   figsize=(10,5),
+#                                 overlap=overlap,
+#                                 ax=axes,
+#                                 colormap=ListedColormap(sns.color_palette('pastel', n_colors=3)),
+#                                 # colormap=plt.cm.YlGnBu,
+#                                 ylabels=use_ylabels,
+#                                 #   title=f'Vote scenario: {vote_scenario}, {scenario}',
+#                                 title=f'{vote_scenario}',
+#                                 medians=False,
+#                                 #   x_range=[all_sats['Satisfaction'].min(), all_sats['Satisfaction'].max()]
+#                                 x_range=[0,1]
+#                                 )
+
+#     h_pad = 5 + (- 5*(1 + overlap))
+#     fig.tight_layout(h_pad=h_pad)
+#     if group is not None:
+#         fig.savefig(f"{plots_directory}/{scenario}_ridge_{group}.pdf", bbox_inches="tight")
+#     else:
+#         fig.savefig(f"{plots_directory}/{scenario}_ridge.pdf", bbox_inches="tight")
+# print(all_sats.groupby(['Scenario', 'VoteScenario','VoteCombination']).agg(['mean', 'std']).to_latex())

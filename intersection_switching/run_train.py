@@ -14,8 +14,8 @@ configs = ['../scenarios/hangzhou/1.config',
           ]
 
 learning_rates = {'stops': 0.005,'unique_stops': 0.005,
-                  'wait': 0.05,
-                  'localwait': 0.05}
+                  'wait': 0.025,
+                  'localwait': 0.025}
 decays = {'stops': 0.00005,
             'unique_stops': 0.00005,
                   'wait': 0.00005,
