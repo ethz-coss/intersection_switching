@@ -1,7 +1,8 @@
-# intersection_switching
+# voting_traffic
+
 
 ## Setup
-To run this, please install this fork of CityFlow: https://anonymous.4open.science/r/CityFlow-6533/README.rst
+To run this, please install this fork of CityFlow: https://github.com/mbkorecki/CityFlow
 
 The following packages and versions are needed:
 ```
@@ -9,6 +10,11 @@ geopandas==0.12.1
 gym==0.21
 torch>=1.13
 dill==0.3
+```
+
+Installation can be done using 
+```
+pip install -r requirements.txt
 ```
 
 ## Training
