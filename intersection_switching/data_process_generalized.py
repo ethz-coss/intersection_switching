@@ -312,7 +312,7 @@ hue_order = ["binary + majority",
              "cumulative + proportional"]
 df = pd.DataFrame(for_df)
 g = sns.FacetGrid(df.dropna(), col='scenario', hue_order=hue_order, palette=names_color_map)
-g.map_dataframe(sns.barplot, y='area',
+g.map_dataframe(sns.boxplot, y='area',
                 x='vote_scenario', hue='method', hue_order=hue_order, palette=names_color_map)
 
 pure_df = df[df.isnull().any(axis=1)].reset_index()
@@ -324,6 +324,6 @@ for i, (key, group) in enumerate(pure_df.groupby('scenario')):
 
 h,l = g.axes[0,i].get_legend_handles_labels()
 g.fig.legend(h, l, loc='lower center', bbox_to_anchor=(0.5, 1.0), ncols=3)
-g.set_axis_labels("voting scenario", "total objective score")
+g.set_axis_labels("voting scenario", "overall system performance")
 
 # g.fig.savefig('../figs/scalar_plot.pdf', bbox_inches='tight')
