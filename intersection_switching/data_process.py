@@ -1,6 +1,7 @@
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 from radar_plot import ComplexRadar 
 
@@ -128,6 +129,27 @@ for vote_type in vote_modes:
 
 plt.rcParams.update({'font.size': 12})
 
+b1,b2, b3 = 0,0,0
+
+
+##### for uniform axis limits
+# for traffic in traffic_conditions:
+
+#     _labels = [f"{traffic[0]}_{traffic[1]}_proportional", f"{traffic[0]}_{traffic[1]}_majority"]
+
+#     b1 = max(b1, max([x[0] for ll in _labels for x in all_data[ll] ]))
+#     b2 = max(b2, max([x[1] for ll in _labels for x in all_data[ll] ]))
+#     b3 = max(b3, max([x[2] for ll in _labels for x in all_data[ll] ]))
+# ranges = [(0, b1),
+#             (b2, 0),
+#             (b3, 0)]
+
+colors = sns.color_palette(None, 7)
+names_color_map = {'Stops': colors[1],
+                    'Wait Times': colors[2],
+                    'Prop S+W': colors[0],
+                    'Major S+W': colors[6]
+                    }
 for traffic in traffic_conditions:
 
     key_prop = f"{traffic[0]}_{traffic[1]}_proportional"
@@ -157,11 +179,12 @@ for traffic in traffic_conditions:
         radar = ComplexRadar(axes, variables, ranges)
 
         for d, name in zip(data, names):
-            radar.plot(d, label=name)
-            radar.fill(d, alpha=0.2)
+            radar.plot(d, label=name, color=names_color_map[name])
+            radar.fill(d, alpha=0.2, color=names_color_map[name])
 
-        radar.plot(all_data[key_major][2], label="Major S+W")
-        radar.fill(all_data[key_major][2], alpha=0.2)
+        name = "Major S+W"
+        radar.plot(all_data[key_major][2], label=name, color=names_color_map[name])
+        radar.fill(all_data[key_major][2], alpha=0.2, color=names_color_map[name])
 
         fig1.legend()
 

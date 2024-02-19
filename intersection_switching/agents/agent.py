@@ -23,6 +23,7 @@ class Agent:
         self.total_rewards = []
         self.reward_count = 0
 
+        # self.phase = None
 
         # self.next_act_time = env.action_freq
         self.next_act_time = 0
@@ -36,11 +37,14 @@ class Agent:
         self.init_phases(self.env.eng)
 
         self.in_lanes = [x.in_lanes for x in self.movements.values()]
-        self.in_lanes = set([x for sublist in self.in_lanes for x in sublist])
+        self.in_lanes = list(set([x for sublist in self.in_lanes for x in sublist]))
 
         self.out_lanes = [x.out_lanes for x in self.movements.values()]
-        self.out_lanes = set(
-            [x for sublist in self.out_lanes for x in sublist])
+        self.out_lanes = list(set(
+            [x for sublist in self.out_lanes for x in sublist]))
+
+        self.in_lanes.sort(key=lambda x: (x[-3], x[-1])) # sort by road direction then lane id
+        self.out_lanes.sort(key=lambda x: (x[-3], x[-1]))
 
         self.density = []
 
@@ -123,7 +127,6 @@ class Agent:
                 if phase.ID not in self.movements[move].phases:
                     self.movements[move].phases.append(phase.ID)
 
-
     def set_phase(self, eng, phase):
         """
         sets the phase of the agent to the indicated phase
@@ -186,6 +189,10 @@ class Agent:
         self.next_act_time = 0
         self.last_act_time = -1
         self.action_type = 'act'
+        self.reset_measures()
+
+    def reset_measures(self):
+        pass
 
     def update_priority_idx(self, time):
         """
@@ -224,6 +231,8 @@ class Agent:
         if self.action_type == "act":
             if type(action) is tuple:
                 action, self.green_time = action
+                if self.green_time is None:
+                    self.green_time = self.env.action_freq
                 self.chosen_phase = self.phases[action]
             else:
                 self.chosen_phase = self.phases[action]

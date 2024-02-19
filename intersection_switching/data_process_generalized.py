@@ -2,211 +2,328 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-
-from radar_plot import ComplexRadar 
-
-traffic_conditions = [[-1,-1]]
+from run_vote import vote_scenarios, pure_methods, baseline
+from radar_plot2 import ComplexRadar, format_cfg
+import itertools
+import pickle
+import utils
 
 pref_types = ['speed', 'stops', 'wait']
 
-vote_speed = [1.0, 0.0, 0.0]
-vote_stops = [0.0, 1.0, 0.0]
-vote_wait = [0.0, 0.0, 1.0]
+vote_scenarios = list(vote_scenarios.keys())
+vote_inputs = ['binary','cumulative']
 
-vote_uniform_1 = [0.5, 0.5, 0.0]
-vote_uniform_2 = [0.5, 0.0, 0.5]
-vote_uniform_3 = [0.0, 0.5, 0.5]
+vote_types = ["proportional", "majority"]
 
-vote_quarter_1 = [0.75, 0.25, 0.0]
-vote_quarter_2 = [0.75, 0.0, 0.25]
-vote_quarter_3 = [0.25, 0.0, 0.75]
-vote_quarter_4 = [0.0, 0.25, 0.75]
-vote_quarter_5 = [0.25, 0.75, 0.0]
-vote_quarter_6 = [0.0, 0.75, 0.25]
+# categories = ['Speed', 'Number of Stops', 'Wait Time']
+# categories = [*categories, categories[0]]
 
-# vote_types = [vote_speed, vote_stops, vote_wait, vote_uniform_1, vote_uniform_2, vote_uniform_3]#, vote_quarter_1, vote_quarter_2, vote_quarter_3, vote_quarter_4, vote_quarter_5, vote_quarter_6]
-
-# vote_types = [vote_uniform_1, vote_uniform_2, vote_uniform_3]
-vote_types = [vote_stops, vote_wait, vote_uniform_3]
-vote_modes = ["proportional", "majority"]
-vote_modes = ["proportional"]
-
-categories = ['Speed', 'Number of Stops', 'Wait Time']
-categories = [*categories, categories[0]]
-
+scenarios = ['hangzhou_1','hangzhou_2']
 all_data = {}
 all_names = {}
 
-for vote_type in vote_modes:
-    for j, traffic in enumerate(traffic_conditions):
-        data = []
-        names = []
+def process_data(path):
+    speeds_path = path + "/veh_speed_hist.pickle"
+    stops_path = path + "/veh_stops.pickle"
+    wait_path = path + "/veh_wait_time.pickle"
 
-        for vote in vote_types:
-            avg_total_waits = []
-            avg_total_stops = []
-            avg_total_speeds = []
-            for i in range(100):
-                # if (vote == vote_stops or vote == vote_wait) and i >= 1:
-                #     break
+    with open(speeds_path, "rb") as f:
+        speeds = pickle.load(f)
 
-                if i == 0:
-                    path = f"../runs/{vote_type}_100/{traffic[0]}_{traffic[1]}_{vote[0]}_{vote[1]}_{vote[2]}"
-                else:
-                    path = f"../runs/{vote_type}_100/{traffic[0]}_{traffic[1]}_{vote[0]}_{vote[1]}_{vote[2]}({i})"
+    veh_speed = [np.mean(speeds[x]) for x in speeds.keys()]
 
-                speeds_path = path + "/veh_speed_hist.pickle"
-                stops_path = path + "/veh_stops.pickle"
-                wait_path = path + "/veh_wait_time.pickle"
+    with open(stops_path, "rb") as f:
+        stops = pickle.load(f)
 
-                with open(speeds_path, "rb") as f:
-                    speeds = pickle.load(f)
+    veh_stops = [np.mean(stops[x]) for x in stops.keys()]
 
-                avg_speed = np.mean([np.mean(speeds[x]) for x in speeds.keys()])
-                var_speed = np.std(([np.mean(speeds[x]) for x in speeds.keys()]))
-                # print("speed: ", avg_speed, var_speed)
+    with open(wait_path, "rb") as f:
+        wait = pickle.load(f)
 
-                with open(stops_path, "rb") as f:
-                    stops = pickle.load(f)
+    wait = {k:v if v else [0] for k,v in wait.items()}
 
-                avg_stops = np.mean([np.mean(stops[x]) for x in stops.keys()])
-                var_stops = np.std(([np.mean(stops[x]) for x in stops.keys()]))
-                # print("stops: ", avg_stops, var_stops)
+    veh_wait = [np.mean(wait[x]) for x in wait.keys()]
 
-                with open(wait_path, "rb") as f:
-                    wait = pickle.load(f)
+    return veh_wait, veh_stops, veh_speed
 
-                wait = {k:v if v else [0] for k,v in wait.items()}
+def rescale(d, ranges):
+    _ranges = [*ranges, ranges[0]]
+    new_data = []
+    for i, _d in enumerate(d):
+        minmax = _ranges[i]
+        val = (_d-minmax[0])/(minmax[1]-minmax[0])
+        new_data.append(val)
+    return new_data
 
-                avg_wait = np.mean([np.mean(wait[x]) for x in wait.keys()])
-                var_wait = np.std(([np.mean(wait[x]) for x in wait.keys()]))
-                # print("wait: ", avg_wait, var_wait)
+data_dict = []
+for (scenario, vote_scenario) in itertools.product(scenarios, vote_scenarios):
+    if vote_scenario in pure_methods+baseline:
+        continue
+    data = []
+    names = []
+    for vote_type in vote_types:
+        for vote_input in vote_inputs:
+                vote = vote_scenario
+                avg_total_waits = []
+                avg_total_stops = []
+                avg_total_speeds = []
+                for i in range(10):
+                    if type(vote)==list:
+                        path = f"../runs/{vote_type}/{vote_input}/{scenario}_{'_'.join(map(str,vote))}"
+                    else:
+                        path = f"../runs/{vote_type}/{vote_input}/{scenario}_{vote}"
+                    # if i!=0:
+                    path += f"({i})"
 
-                avg_total_waits.append(avg_wait)
-                avg_total_stops.append(avg_stops)
-                avg_total_speeds.append(avg_speed)
+                    try:
+                        veh_wait, veh_stops, veh_speed = process_data(path)
+                    except FileNotFoundError:
+                        print('FILE MISSING:', path)
+                        continue
 
-                # if vote == [0.0, 0.5, 0.5]:
-                #     print(traffic[0], traffic[1], "per car")
-                #     print("wait: ", avg_wait, var_wait)
-                #     print("stops: ", avg_stops, var_stops)
+                    avg_wait, avg_stops, avg_speed = list(map(np.mean, [veh_wait, veh_stops, veh_speed]))
+                    avg_total_waits.append(avg_wait)
+                    avg_total_stops.append(avg_stops)
+                    avg_total_speeds.append(avg_speed)
 
-            # if vote == [0.0, 0.5, 0.5]:
-            #     print(vote, traffic[0], traffic[1])
-            #     print("wait: ", np.mean(avg_total_waits), np.std(avg_total_waits))
-            #     print("stops: ", np.mean(avg_total_stops), np.std(avg_total_stops))
-            #     print("speeds: ", np.mean(avg_total_speeds), np.std(avg_total_speeds))
 
-            #     plt.scatter(avg_total_waits, avg_total_stops)
-            #     plt.show()
+                    data_dict.append({
+                        'speeds': avg_speed,
+                        'stops': avg_stops,
+                        'wait': avg_wait,
+                        'raw_speeds': veh_speed,
+                        'raw_stops': veh_stops,
+                        'raw_wait': veh_wait,
+                        'vote_type': vote_type,
+                        'vote_input': vote_input,
+                        'trial': i,
+                        'name': f"{vote_input} + {vote_type}",
+                        'vote_scenario':vote_scenario,
+                        'scenario': scenario
+                    })
 
-            result = [np.mean(avg_total_speeds), np.mean(avg_total_stops), np.mean(avg_total_waits)]
-            # print(np.mean(avg_total_speeds), np.var(avg_total_speeds),
-            #       np.mean(avg_total_stops), np.var(avg_total_stops),
-            #       np.mean(avg_total_waits), np.var(avg_total_waits))
-            result = [*result, result[0]]
-            data.append(result)
+                result = [np.mean(avg_total_speeds), np.mean(avg_total_stops), np.mean(avg_total_waits)]
+                result = [*result, result[0]]
+                data.append(result)
 
-            if vote == [0.0, 1.0, 0.0]:
-                name = "Stops"
-            elif vote == [0.0, 0.0, 1.0]:
-                name = "Wait Times"
-            else:
-                name = "Prop S+W"
+                # if type(vote)==list:
+                #     if vote == [0.0, 1.0, 0.0]:
+                #         name = "Stops"
+                #     elif vote == [0.0, 0.0, 1.0]:
+                #         name = "Wait Times"
+                # else:
+                #     name = vote
+                name = f"{vote_input} + {vote_type}"
+                names.append(name)
+                
+    key = f"{scenario}_{vote_scenario}"
+    all_data.update({key:data})
+    all_names.update({key:names})
 
-            names.append(name)
-        
-        key = f"{traffic[0]}_{traffic[1]}_{vote_type}"
-        all_data.update({key:data})
-        all_names.update({key:names})
 
-plt.rcParams.update({'font.size': 12})
+
+# with open('all_names.pickle', 'wb') as handle:
+#     pickle.dump(all_names, handle, protocol=pickle.HIGHEST_PROTOCOL)
+# with open('all_data.pickle', 'wb') as handle:
+#     pickle.dump(all_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+# ## Plotting happens here
+
+# with open('all_names.pickle', 'rb') as handle:
+#     all_names = pickle.load(handle)
+# with open('all_data.pickle', 'rb') as handle:
+#     all_data = pickle.load(handle)
+
+
+for scenario in scenarios:
+    data = []
+    names = []
+    for method in pure_methods+baseline:
+        prefix = ''
+        if method in pure_methods:
+            prefix = 'pure'
+            num = 10
+        elif method in baseline:
+            prefix = 'baseline'
+            num = 10
+
+        avg_total_waits = []
+        avg_total_stops = []
+        avg_total_speeds = []
+        for i in range(num):
+            path = f"../runs/{prefix}/{method}/{scenario}_{method}({i})"
+
+            try:
+                veh_wait, veh_stops, veh_speed = process_data(path)
+            except FileNotFoundError:
+                print('BASELINE FILES MISSING:', path)
+                continue
+
+            avg_wait, avg_stops, avg_speed = list(map(np.mean, [veh_wait, veh_stops, veh_speed]))
+            avg_total_waits.append(avg_wait)
+            avg_total_stops.append(avg_stops)
+            avg_total_speeds.append(avg_speed)
+            data_dict.append({
+                'speeds': avg_speed,
+                'stops': avg_stops,
+                'wait': avg_wait,
+                'raw_speeds': veh_speed,
+                'raw_stops': veh_stops,
+                'raw_wait': veh_wait,
+                'vote_type': None,
+                'vote_input': None,
+                'trial': i,
+                'name': f"{method}",
+                'vote_scenario':None,
+                'scenario': scenario
+            })
+
+        result = [np.mean(avg_total_speeds), np.mean(avg_total_stops), np.mean(avg_total_waits)]
+        result = [*result, result[0]]
+        data.append(result)
+
+        name = f"{method}"
+        names.append(name)
+                
+    key = f"{scenario}_pure"
+    all_data.update({key:data})
+    all_names.update({key:names})
+
+
+
+plt.rcParams.update({'font.size': 6})
 
 b1,b2, b3 = 0,0,0
-
-
-##### for uniform axis limits
-# for traffic in traffic_conditions:
-
-#     _labels = [f"{traffic[0]}_{traffic[1]}_proportional", f"{traffic[0]}_{traffic[1]}_majority"]
-
-#     b1 = max(b1, max([x[0] for ll in _labels for x in all_data[ll] ]))
-#     b2 = max(b2, max([x[1] for ll in _labels for x in all_data[ll] ]))
-#     b3 = max(b3, max([x[2] for ll in _labels for x in all_data[ll] ]))
-# ranges = [(0, b1),
-#             (b2, 0),
-#             (b3, 0)]
-
-colors = sns.color_palette(None, 7)
-names_color_map = {'Stops': colors[1],
-                    'Wait Times': colors[2],
-                    'Prop S+W': colors[0],
-                    'Major S+W': colors[6]
+colors = sns.color_palette('tab10', 10)
+names_color_map = {'binary + majority': colors[0],
+                   'binary + proportional': colors[1],
+                   'cumulative + proportional': colors[2]
                     }
-for traffic in traffic_conditions:
 
-    # key_prop = f"{traffic[0]}_{traffic[1]}_proportional"
-    # key_major = f"{traffic[0]}_{traffic[1]}_majority"
+
+pure_fig = plt.figure(figsize=(4,2.5), dpi=300)
+pure_subfigs = pure_fig.subfigures(1, 2)
+
+
+for_df = []
+for i, scenario in enumerate(scenarios):
+
+    fig = plt.figure(figsize=(6,2.5), dpi=300)
+    subfigs = fig.subfigures(1, sum([0 if vote_scenario in pure_methods+baseline else 1 for vote_scenario in vote_scenarios]))
     
-    # ranges = [(0, max(max([x[0] for x in all_data[key_prop]]), max([x[0] for x in all_data[key_major]]))),
-    #           (max(max([x[1] for x in all_data[key_prop]]), max([x[1] for x in all_data[key_major]])), 0),
-    #           (max(max([x[2] for x in all_data[key_prop]]), max([x[2] for x in all_data[key_major]])), 0)
-    #            ]
+    ## set bounds
+    scenario_key_filter = [key for key in all_data.keys() if scenario in key]
+    ranges = [(0, max([x[0] for key_prop in scenario_key_filter for x in all_data[key_prop]])),
+            (max([x[1] for key_prop in scenario_key_filter for x in all_data[key_prop]]), 0),
+            (max([x[2] for key_prop in scenario_key_filter for x in all_data[key_prop]]), 0)
+            ]
 
-    key_prop = f"{traffic[0]}_{traffic[1]}_proportional"
-    
-    ranges = [(0, max([x[0] for x in all_data[key_prop]])),
-              (max([x[1] for x in all_data[key_prop]]), 0),
-              (max([x[2] for x in all_data[key_prop]]), 0)
-               ]
+    secranges = [(min([x[0] for key_prop in scenario_key_filter for x in all_data[key_prop]]), max([x[0] for key_prop in scenario_key_filter for x in all_data[key_prop]])),
+            (max([x[1] for key_prop in scenario_key_filter for x in all_data[key_prop]]), min([x[1] for key_prop in scenario_key_filter for x in all_data[key_prop]])),
+            (max([x[2] for key_prop in scenario_key_filter for x in all_data[key_prop]]), min([x[2] for key_prop in scenario_key_filter for x in all_data[key_prop]]))
+            ]
+    secranges = ranges
+
+    # rr = [(0,1)]*3
 
 
-    for vote_type in ["proportional"]:
-        if vote_type == "majority":
-            key = key_major
-        else:
-            key = key_prop
+    variables = ('Speed', 'Stops', 'Wait Time')
+
+    key = f"{scenario}_pure"
         
+    data = all_data[key]
+    names = all_names[key]
+
+    __purefig = pure_subfigs[i]
+
+    # radar = ComplexRadar(axes, variables, ranges)
+    pure_radar = ComplexRadar(__purefig, variables, ranges, format_cfg=format_cfg)
+
+    sc_title = scenario
+    if scenario == 'hangzhou':
+        sc_title = "Hangzhou"
+    elif scenario == 'ny16':
+        sc_title = "NY16"
+
+    for k, (d, name) in enumerate(zip(data, names)):
+        print(d)
+        dd = rescale(d, secranges)
+        print(d, ranges)
+        for_df.append({'area': sum(dd[:-1]),
+                        'method': f'pure_{name}',
+                        'scenario': sc_title})
+        pure_radar.plot(d, label=utils.NAME_MAPPER.get(name, name), color=colors[k+5])
+        pure_radar.fill(d, alpha=0.1, color=colors[k+5])
+
+
+    __purefig.suptitle(sc_title, y=1.05, fontsize=8, fontweight='bold')
+
+    save_name = f"../figs/{scenario}_metrics.pdf"
+    print(save_name)
+    for j, vote_scenario in enumerate(vote_scenarios):
+        if vote_scenario in pure_methods+baseline:
+            continue
+        key = f"{scenario}_{vote_scenario}"
+            
         data = all_data[key]
         names = all_names[key]
 
-        save_name = f"../figs/{traffic[0]}_{traffic[1]}.pdf"
-        print(save_name)
-        # save_name = f"../figs/figure1.pdf"
+        fig1 = subfigs[j]
 
-        fig1, axes = plt.subplots(1,1, subplot_kw={'projection':'polar'})
+        # radar = ComplexRadar(axes, variables, ranges)
+        radar = ComplexRadar(fig1, variables, ranges, format_cfg=format_cfg)
 
-        variables = ('Speed', 'Stops', 'Wait Time')
-        radar = ComplexRadar(axes, variables, ranges)
+        if vote_scenario=='majority_extreme':
+            vote_scenario = 'committed minority'
+        for k, (d, name) in enumerate(zip(data, names)):
+            if name=="cumulative + majority":
+                continue
+            kwargs = {}
+            if 'cumulative' in name:
+                 kwargs['zorder'] = 10
+                 kwargs['ls'] = '--'
+            dd = rescale(d, secranges)
+            for_df.append({'area': sum(dd[:-1]),
+                            'method': name,
+                            'scenario': sc_title,
+                            'vote_scenario': vote_scenario})
+            radar.plot(d, label=name, color=names_color_map[name], **kwargs)
+            radar.fill(d, alpha=0.1, color=names_color_map[name])
 
-        for d, name in zip(data, names):
-            radar.plot(d, label=name, color=names_color_map[name])
-            radar.fill(d, alpha=0.2, color=names_color_map[name])
+        fig1.suptitle(vote_scenario, y=1.05, fontsize=8, fontweight='bold')
 
-        name = "Major S+W"
-        # radar.plot(all_data[key_major][2], label=name, color=names_color_map[name])
-        # radar.fill(all_data[key_major][2], alpha=0.2, color=names_color_map[name])
-
-        fig1.legend()
-
-        # if traffic[0] == 11:
-        #     if traffic[1] == 11:
-        #         axes.set_title("Low Balanced")
-        #     else:
-        #         axes.set_title("Low Unbalanced")
-        # elif traffic[0] == 22:
-        #     if traffic[1] == 22:
-        #         axes.set_title("Medium Balanced")
-        #     else:
-        #         axes.set_title("Medium Unbalanced")
-        # elif traffic[0] == 32:
-        #     if traffic[1] == 32:
-        #         axes.set_title("High Balanced")
-        #     else:
-        #         axes.set_title("High Unbalanced")
+    h,l = radar.get_legend_handles_labels()
+    fig.legend(h, l, loc='lower center', bbox_to_anchor=(0.5, 1.05), ncols=3)
+    fig.tight_layout()
+    fig.savefig(save_name, format='pdf', bbox_inches='tight')
 
 
+h,l = pure_radar.get_legend_handles_labels()
+pure_fig.legend(h, l, loc='lower center', bbox_to_anchor=(0.5, 1.05), ncols=3)
+pure_fig.savefig('../figs/pure.pdf', format='pdf', bbox_inches='tight')
 
-        fig1.savefig(save_name, format='pdf', bbox_inches='tight')
+
+import pandas as pd
 
 
+hue_order = ["binary + majority", 
+             "binary + proportional",
+             "cumulative + proportional"]
+df = pd.DataFrame(for_df)
+g = sns.FacetGrid(df.dropna(), col='scenario', hue_order=hue_order, palette=names_color_map)
+g.map_dataframe(sns.barplot, y='area',
+                x='vote_scenario', hue='method', hue_order=hue_order, palette=names_color_map)
+
+pure_df = df[df.isnull().any(axis=1)].reset_index()
+for i, (key, group) in enumerate(pure_df.groupby('scenario')):
+    for j, (_, row) in enumerate(group.iterrows()):
+        g.axes[0,i].axhline(row.area, color=colors[j+5], ls='--')
+        g.axes[0,i].text(0.99,row.area, row.method, color='k', ha='right', va='bottom',# rotation=90,
+            transform=g.axes[0,i].get_yaxis_transform())
+
+h,l = g.axes[0,i].get_legend_handles_labels()
+g.fig.legend(h, l, loc='lower center', bbox_to_anchor=(0.5, 1.0), ncols=3)
+g.set_axis_labels("voting scenario", "total objective score")
+
+# g.fig.savefig('../figs/scalar_plot.pdf', bbox_inches='tight')

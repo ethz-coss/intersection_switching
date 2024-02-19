@@ -1,7 +1,6 @@
 from engine.cityflow.intersection import Movement, Phase
 import numpy as np
 from gym import spaces
-import random
 
 class VehicleAgent:
     """
@@ -23,6 +22,9 @@ class VehicleAgent:
         self.distance = 0
         self.total_rewards = []
         self.start_time = 0
+        self.alignments = []
+        self.dissatisfactions = []
+        self.satisfactions = []
 
         n_actions = 2 # (binary choice?)
         n_states = 10 # TODO: edit
@@ -64,6 +66,7 @@ class VehicleAgent:
         self.distance = 0
         self.total_rewards = []
         self.start_time = 0
+        self.satisfactions = []
 
     def observe(self, eng, time, lanes_count, lane_vehs, veh_distance):
         raise NotImplementedError

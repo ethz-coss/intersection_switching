@@ -3,9 +3,9 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import torch
-import random
 import pickle
 import dill
+import utils
 # from network_parser import get_network
 
 class Logger:
@@ -30,22 +30,35 @@ class Logger:
         self.travel_times = []
 
         self.objective_alignment = []
-
+        self.vote_satisfaction = [] #individual votes, no driver tracking
+        self.driver_satisfaction = {}
+        self.driver_alignment = {}
         self.reward = 0
 
         config_dir, config_file = os.path.split(args.sim_config)
         scenario_name = os.path.basename(config_dir)
+        scenario_name = f"{scenario_name}_{config_file.split('.')[0]}"
         if args.n_vehs is None:
-            n_vehs = [-1,-1]
+            n_vehs = None
+            exp_name = f"{scenario_name}_{args.reward_type}"
         else: 
             n_vehs = args.n_vehs
-        exp_name = f"{n_vehs[0]}_{n_vehs[1]}_{args.reward_type}"
+            exp_name = f"{n_vehs[0]}_{n_vehs[1]}_{args.reward_type}"
 
         if args.load != None or args.load_cluster != None:
             scenario_name += "_load"
 
         if args.mode == 'vote':
-            exp_name =  f"{n_vehs[0]}_{n_vehs[1]}_{args.vote_weights[0]}_{args.vote_weights[1]}_{args.vote_weights[2]}"
+            # exp_name =  f"{'_'.join(map(str,n_vehs)) if n_vehs is not None else scenario_name}_{'_'.join(map(str,args.vote_weights))}"
+            voting_scenario = args.scenario
+            if args.scenario is None:
+                if args.vote_weights == [0,0,1]:
+                    voting_scenario = 'waits'
+                elif args.vote_weights == [0,1,0]:
+                    voting_scenario = 'stops'
+                else:
+                    voting_scenario = '_'.join(map(str, args.vote_weights))
+            exp_name =  f"{'_'.join(map(str,n_vehs)) if n_vehs is not None else scenario_name}_{voting_scenario}"
             self.log_path = os.path.join(args.path, exp_name)
         elif args.mode == 'train':
             self.log_path = os.path.join("../saved_models", exp_name)
@@ -53,14 +66,15 @@ class Logger:
         head, tail = os.path.split(self.log_path)
         i = 1
 
-        if args.ID:
+        if args.ID is not None:
             self.log_path = os.path.join(head, f'{tail}({args.ID})')
         else:
             while os.path.exists(self.log_path):
                 self.log_path = os.path.join(head, f'{tail}({i})')
                 i += 1
         print(f'saving to {self.log_path}')
-        os.makedirs(self.log_path)
+        os.makedirs(self.log_path, exist_ok=True)
+        self.scenario_name = scenario_name
 
     def log_measures(self, environ):
         """
@@ -70,7 +84,8 @@ class Logger:
         self.reward = 0
         for agent in environ.agents:
             self.reward += np.mean(agent.total_rewards)
-
+        self.reward /= len(environ.agents)
+        
         self.plot_rewards.append(self.reward)
         self.veh_count.append(environ.eng.get_finished_vehicle_count())
         self.travel_time.append(environ.eng.get_average_travel_time())
@@ -90,7 +105,7 @@ class Logger:
             output[road_id] = {}
             density = np.vstack(road_data['density'])
             speed = np.vstack(road_data['speed'])
-            output[road_id]['speed'] = np.nansum(speed*density, axis=0)/np.nansum(density, axis=0)
+            output[road_id]['speed'] = utils.div0(np.nansum(speed*density, axis=0), np.nansum(density, axis=0))
             output[road_id]['density'] = np.nanmean(density, axis=0)
 
         self.mfd = output
@@ -145,6 +160,10 @@ class Logger:
             with open(os.path.join(self.log_path, "memory.dill"), "wb") as f:
                 dill.dump(policy.memory.memory, f)
 
+        if self.args.trajectory:
+            with open(os.path.join(self.log_path, "trajectory.pickle"), "wb") as f:
+                pickle.dump(environ.trajectory, f)
+
         with open(os.path.join(self.log_path, "agent_history.dill"), "wb") as f:
             pickle.dump(environ.agent_history, f)
         with open(os.path.join(self.log_path, "waiting_time.pickle"), "wb") as f:
@@ -158,6 +177,8 @@ class Logger:
             pickle.dump(veh_stops, f)
         with open(os.path.join(self.log_path, "veh_delays.pickle"), "wb") as f:
             pickle.dump(veh_delays, f)
+        with open(os.path.join(self.log_path, "veh_count.pickle"), "wb") as f:
+            pickle.dump(self.veh_count, f)
 
         with open(os.path.join(self.log_path, "agents_rewards.pickle"), "wb") as f:
             pickle.dump(reward_dict, f)
@@ -176,9 +197,34 @@ class Logger:
         with open(os.path.join(self.log_path, "travel_times.pickle"), "wb") as f:
             pickle.dump(self.travel_times, f)
 
-        with open(os.path.join(self.log_path, "obj_alignment.pickle"), "wb") as f:
-            pickle.dump(self.objective_alignment, f)        
+        ## VOTING METRIC LOGS:
+        if self.args.mode=='vote':
+            with open(os.path.join(self.log_path, "obj_alignment.pickle"), "wb") as f:
+                pickle.dump(self.objective_alignment, f)
+
+            with open(os.path.join(self.log_path, "alignment_intersection.pickle"), "wb") as f:
+                pickle.dump(self.vote_satisfaction, f)  
+
+            with open(os.path.join(self.log_path, "alignment_drivers.pickle"), "wb") as f:
+                for vid, veh in environ.vehicles.items():
+                    grp = veh.group
+                    drive_sats = self.driver_alignment.setdefault(grp, [])
+                    drive_sats.append(np.mean(veh.alignments))
+                pickle.dump(self.driver_alignment, f)
+
+            with open(os.path.join(self.log_path, "satisfaction_drivers.pickle"), "wb") as f:
+                for vid, veh in environ.vehicles.items():
+                    grp = veh.group
+                    drive_sats = self.driver_satisfaction.setdefault(grp, {"satisfaction": [],
+                                                                        "dissatisfaction": []})
+                    drive_sats['satisfaction'].append(np.mean(veh.satisfactions))
+                    drive_sats['dissatisfaction'].append(np.mean(veh.dissatisfactions))
+
+                pickle.dump(self.driver_satisfaction, f) 
             
+            with open(os.path.join(self.log_path, "act_probs.pickle"), "wb") as f:
+                pickle.dump(self.act_probs, f) 
+
         if environ.agents_type in ['learning', 'hybrid', 'presslight', 'policy', 'denflow']:
             with open(os.path.join(self.log_path, "episode_rewards.pickle"), "wb") as f:
                 pickle.dump(self.plot_rewards, f)

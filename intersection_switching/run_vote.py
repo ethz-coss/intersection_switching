@@ -1,47 +1,81 @@
 import os
+from shutil import which
 
-# low_balanced = [11, 11]
-# low_unbalanced = [11, 6]
-
-# medium_balanced = [22, 22]
-# medium_unbalanced = [22, 11]
-
-# high_balanced = [32, 32]
-# high_unbalanced = [32, 16]
+IS_SLURM = which('sbatch') is not None
 
 
-# traffic_conditions = [medium_balanced]#, low_unbalanced, medium_balanced, medium_unbalanced, high_balanced, high_unbalanced]
+vote_scenarios = {
+    'bipolar': [0, 0.5, 0.5],
+    'majority_extreme': [0, 0.2, 0.8],
+    'random': [0, 0.5, 0.5],
+    # 'stops': [0, 1, 0],
+    'unique_stops': [0, 1, 0],
+    # 'waits': [0, 0, 1], 
+    'localwait': [0, 0, 1],
+    # 'demand': [0, 0.5, 0.5],
+    # 'fixed': [0, 0.5, 0.5],
+}
 
 
-vote_speed = [1, 0, 0]
-vote_stops = [0, 1, 0]
-vote_wait = [0, 0, 1]
+pure_methods = [
+                # 'stops', 
+                # 'waits', 
+                'localwait', 
+                'unique_stops'
+                ]
 
-vote_uniform_1 = [0.5, 0.5, 0]
-vote_uniform_2 = [0.5, 0, 0.5]
-vote_uniform_3 = [0, 0.5, 0.5]
+# baseline = ['demand', 'fixed']
+baseline = ['fixed']
+input_methods = ['binary', 'cumulative']
+# configs = ['../scenarios/hangzhou/1.config', '../scenarios/ny16/1.config']
+configs = ['../scenarios/hangzhou/1.config',
+            '../scenarios/hangzhou/2.config']
+vote_types = ['proportional', 'majority']
 
-vote_quarter_1 = [0.75, 0.25, 0]
-vote_quarter_2 = [0.75, 0, 0.25]
-vote_quarter_3 = [0.25, 0, 0.75]
-vote_quarter_4 = [0, 0.25, 0.75]
-vote_quarter_5 = [0.25, 0.75, 0]
-vote_quarter_6 = [0, 0.75, 0.25]
+total_points = 10
+sim_steps = 3600
+trials = 50
 
+if __name__=='__main__':
+    for sim_config in configs:
+        override = False
+        for scenario, weights in vote_scenarios.items():
+            for input_method in input_methods:
+                for vote_type in vote_types:
+                    calls = []
+                    agent_type = 'learning'
+                    breakflag = False # do only one of pure and baselines
+                    for i in range(trials):
+                        path = f'../runs/{vote_type}/{input_method}{"_override" if override else ""}/'
+                        if scenario in pure_methods:
+                            path = f'../runs/pure/{scenario}'
+                            # breakflag = True
+                        if scenario in baseline:
+                            path = f'../runs/baseline/{scenario}'
+                            # breakflag = True
+                            agent_type = scenario
+                        if input_method=='binary':
+                            vote_weights = " ".join(str(x) for x in weights)
+                            call = f"python runner.py --sim_config {sim_config} --num_sim_steps {sim_steps} --seed {i} --ID {i} --eps_start 0 --eps_end 0 --lr 0.0005 --mode vote --agents_type {agent_type} --num_episodes 1 --mfd False --total_points {total_points} --binary --scenario {scenario} --vote_type {vote_type} --path {path}"
+                        else:  # cumulative voting
+                            call = f"python runner.py --sim_config {sim_config} --num_sim_steps {sim_steps} --seed {i} --ID {i} --eps_start 0 --eps_end 0 --lr 0.0005 --mode vote --agents_type {agent_type} --num_episodes 1 --mfd False --total_points {total_points} --scenario {scenario} --vote_type {vote_type} --path {path}"
+                        
+                        if override:
+                            call += ' --override'
+                        if i==0: # replay
+                            call += ' --trajectory --replay'
+                        calls.append(call)
+                        if breakflag:
+                            break
 
-# vote_types = [vote_stops, vote_wait, vote_uniform_1, vote_uniform_2, vote_uniform_3]#, vote_quarter_1, vote_quarter_2, pvote_quarter_3, vote_quarter_4, vote_quarter_5, vote_quarter_6]
-# vote_types = [vote_speed]
-# vote_types = [vote_uniform_3]
-vote_types = [vote_stops, vote_wait, vote_uniform_3]
-
-
-sim_config = '../scenarios/2x2/1.config'
-for vote in vote_types:
-    vote = [str(i) for i in vote]
-    # for traffic in traffic_conditions:
-    for i in range(100):
-        call = f"python3 runner.py --sim_config {sim_config} --num_sim_steps 3600 --eps_start 0 --eps_end 0 --lr 0.0005 --mode vote --agents_type learning --num_episodes 1 --replay False --mfd False  --vote_weights {' '.join(vote)} --vote_type proportional --path '../runs/proportional_100/'"
-        os.system(call)
-
-# python runner.py --sim_config ../scenarios/2x2/1.config --num_sim_steps 3600 --eps_start 1 --lr 0.0005 --mode train --agents_type learning --num_episodes 100 --replay True --mfd False --reward_type wait
-        # os.system("sbatch -n 8 --wrap \"python runner.py --sim_config '../scenarios/loop_intersection/rings.config' --num_sim_steps 3600 --eps_start 0 --lr 0.0005 --mode vote --agents_type learning --num_episodes 1 --replay True --mfd False " + " --n_vehs " + str(traffic[0]) + " " + str(traffic[1]) + " --vote_weights " + vote_weights[0] + " " + vote_weights[1] + " " + vote_weights[2] + " " + "\"" )
+                    if IS_SLURM:
+                        pycalls = "\n".join(calls)
+                        # print(pycalls)
+                        os.system(f"""sbatch -n 4  --mem-per-cpu=2G --time=4:00:00 --wrap '{pycalls}'""")
+                    else:
+                        pycalls = "&".join(calls)
+                        os.system(pycalls)
+                    if breakflag:
+                        break
+                if breakflag:
+                    break

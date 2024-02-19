@@ -1,8 +1,12 @@
+slurm*.out
+figs/*
 runs/*
+OLD/*
 models/*
 saved_models/*
 majority_100/*
 proportional_100/*
+*.tar*
 *.pickle
 *.dill
 logs.txt
@@ -38,7 +42,6 @@ exp*/
 random*/
 analytical*/
 fixed*/
-scenarios/*
 
 
 # C extensions

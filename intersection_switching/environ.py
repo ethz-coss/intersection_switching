@@ -14,6 +14,8 @@ from pettingzoo.utils.env import ParallelEnv, AECEnv
 from pettingzoo.utils import agent_selector
 from agents.vehicle_agent import VehicleAgent
 from agents.switch_agent import SwitchAgent 
+from agents.demand_agent import DemandAgent 
+from agents.fixed_agent import FixedAgent 
 
 class Environment(gym.Env):
     """
@@ -41,8 +43,12 @@ class Environment(gym.Env):
             self.fixed_num_vehicles = False
             sim_config = args.sim_config
 
+        self.save_trajectory = args.trajectory
+        self.trajectory = []
 
-        self.eng = cityflow.Engine(sim_config, thread_num=os.cpu_count())
+        cpu_count = int(os.environ.get('SLURM_NPROCS', os.cpu_count()))
+        print(f"num_cpu: { os.environ.get('SLURM_NPROCS', -1),  os.cpu_count()}")
+        self.eng = cityflow.Engine(sim_config, thread_num=cpu_count)
         self.ID = ID
         self.num_sim_steps = args.num_sim_steps
         self.update_freq = args.update_freq      # how often to update the network
@@ -55,11 +61,13 @@ class Environment(gym.Env):
 
         self.eps = self.eps_start
         self.reward_type = reward_type
-
-        self._warmup()
+            
+        self.vehicles = {}
+        if self.fixed_num_vehicles:
+            self._warmup()
 
         self.time = 0
-        random.seed()
+        self.rng = np.random.default_rng(seed=args.seed)
 
         self.veh_speeds = self.eng.get_vehicle_speed()
         self.lane_vehs = self.eng.get_lane_vehicles()
@@ -67,18 +75,25 @@ class Environment(gym.Env):
 
         self.agents_type = args.agents_type
 
-        self.action_freq = 5  # typical update freq for agents
+        self.action_freq = 10  # typical update freq for agents
 
         self.intersection_ids = [x for x in self.eng.get_intersection_ids()
                                 if not self.eng.is_intersection_virtual(x)]
         # self.intersection_ids = ['intersection_0_0'] # single intersection only
         self.intersections = {}
         for intersection_id in self.intersection_ids:
-            self.intersections[intersection_id] = SwitchAgent(self, ID=intersection_id,
-                                                        in_roads=self.eng.get_intersection_in_roads(intersection_id),
-                                                        out_roads=self.eng.get_intersection_out_roads(intersection_id),
-                                                        lr=args.lr, batch_size=args.batch_size)
+            if self.agents_type=='demand':
+                AgentType = DemandAgent
+            elif self.agents_type=='fixed':
+                AgentType = FixedAgent
+            else: # self.agents_type=='learning':
+                AgentType = SwitchAgent
 
+            agent = AgentType(self, ID=intersection_id,
+                              in_roads=self.eng.get_intersection_in_roads(intersection_id),
+                              out_roads=self.eng.get_intersection_out_roads(intersection_id),
+                              lr=args.lr, batch_size=args.batch_size)
+            self.intersections[intersection_id] = agent
 
         self.agents = list(self.intersections.values())
         self.agent_ids = list(self.intersections.keys())
@@ -94,14 +109,16 @@ class Environment(gym.Env):
         self._cumulative_rewards = {agent_id: None for agent_id in self.agent_ids}
         self.dones = {a_id: False for a_id in self.agent_ids}
         self.dones['__all__'] = False
-        self.infos =  {agent: False for agent in self.agent_ids}
+        self.infos = {agent: False for agent in self.agent_ids}
+        self.total_points = args.total_points
+        self.scenario = args.scenario
 
         self.mfd_data = []
         self.agent_history = []
 
         self.lanes = {}
 
-        for lane_id in self.eng.get_lane_vehicles().keys():
+        for lane_id in self.lane_vehs.keys():
             self.lanes[lane_id] = Lane(self.eng, ID=lane_id)
 
         # metrics
@@ -122,7 +139,6 @@ class Environment(gym.Env):
             if len(veh_dict)<sum(self.n_vehs):
                 print(f'WARNING: {len(veh_dict)}/{sum(self.n_vehs)} vehicles generated. Increase warmup period.')
         
-        self.vehicles = {}
         for veh_id in veh_dict:
             self.vehicles[veh_id] = VehicleAgent(self, veh_id)
 
@@ -145,8 +161,8 @@ class Environment(gym.Env):
         self._apply_actions(actions)
         self.sub_steps()
 
-        rewards = self._compute_rewards()
         observations = self._get_obs()
+        rewards = self._compute_rewards()
         info = self.infos
         dones = self._compute_dones()
 
@@ -160,43 +176,48 @@ class Environment(gym.Env):
             self.eng.next_step()
             self.time += 1
 
-            stops = 0
             self.veh_speeds = self.eng.get_vehicle_speed()
             self.lane_vehs = self.eng.get_lane_vehicles()
             self.lanes_count = self.eng.get_lane_vehicle_count()
 
             # required to track distance of periodic trips
             for veh_id, speed in self.veh_speeds.items():
-                new_vehs = []
                 if veh_id not in self.vehicles:
                     self.vehicles[veh_id] = VehicleAgent(self, veh_id) # TODO: remove old vehicles
-                    new_vehs.append(veh_id)
-                    self.assign_driver_preferences(new_vehs, self.pref_types, self.weights)
+                    if self.weights is not None:
+                        self.assign_driver_preferences([veh_id], self.pref_types, weights=self.weights)
+                    else:
+                        self.assign_driver_preferences([veh_id], self.pref_types, total_points=self.total_points, scenario=self.scenario)
                 self.vehicles[veh_id].distance += speed
                 self.vehicles[veh_id].speeds.append(speed)
+                if self.save_trajectory:
+                    info = self.eng.get_vehicle_info(veh_id)
+                    if info['running']=='1' and 'road' in info: # not driving on junction
+                        self.trajectory.append({
+                            'speed': speed,
+                            'distance': float(info['distance']),
+                            'lane': info['drivable'],
+                            'road': info['road'],
+                            'time': self.time,
+                            'veh_id': veh_id
+                        })
 
             for lane_id, lane in self.lanes.items():
                 lane.update_flow_data(self.eng, self.lane_vehs)
                 lane.update_speeds(self, self.lane_vehs[lane_id], self.veh_speeds)
 
-            for veh_id, speed in self.veh_speeds.items():
-                veh = self.vehicles[veh_id]
-                if speed <= 0.1:
-                    veh.wait += 1
-                    if veh.wait == 1:
-                        stops += 1  # first stop
-                        veh.stops += 1
-                elif speed > 0.1 and veh.wait:
-                    self.waiting_times.append(veh.wait)
-                    veh.wait_times.append(veh.wait)
-                    veh.wait = 0
+            stops = 0
+            for tl_id, tl in self.intersections.items():
+                tl_stops, tl_waits = tl.measure()
+                stops += tl_stops
+                self.waiting_times.extend(tl_waits)
             self.speeds.append(np.mean(list(self.veh_speeds.values())))
             self.stops.append(stops)
             self.stops_idx += 1
             self.speeds_idx += 1
 
-            if self.time % self.update_freq == 0:  # TODO: move outside to training
-                self.eps = max(self.eps-self.eps_decay, self.eps_end)
+            # if self.time % self.update_freq == 0:  # TODO: move outside to training
+            #     self.eps = max(self.eps-self.eps_decay, self.eps_end)
 
             for intersection in self.intersections.values():
                 intersection.update()
@@ -204,20 +225,18 @@ class Environment(gym.Env):
                     time_to_act = True
 
     def _apply_actions(self, actions):
-        for intersection in self.intersections.values():
-            # lane_vehicles = self.eng.get_lane_vehicles()
-            # votes = []
-            # for lane_id in intersection.approach_lanes:
-            #     for veh_id in lane_vehicles[lane_id]:
-            #         votes.append(self.vehicles[veh_id].get_vote())
-            intersection.apply_action(self.eng, actions[intersection.ID],
-                                   self.lane_vehs, self.lanes_count)
+        for tl_id, action in actions.items():
+            intersection = self._agents_dict[tl_id]
+            if intersection.time_to_act:
+                intersection.apply_action(self.eng, action,
+                                    self.lane_vehs, self.lanes_count)
 
     def _get_obs(self):
         vehs_distance = self.eng.get_vehicle_distance()
 
-        self.observations = {tl.ID: tl.observe(vehs_distance) for tl in self.intersections.values()}
-        return self.observations
+        self.observations.update({tl.ID: tl.observe(
+            vehs_distance) for tl in self.intersections.values() if tl.time_to_act})
+        return self.observations.copy()
 
     def _compute_dones(self):
         dones = {ts_id: False for ts_id in self.intersection_ids}
@@ -225,8 +244,13 @@ class Environment(gym.Env):
         return dones
 
     def _compute_rewards(self):
-        self.rewards = {tl.ID: tl.calculate_reward(self.lanes_count, type=self.reward_type) for tl in self.intersections.values()}
-        return self.rewards
+        rew = {}
+        for tl in self.intersections.values():
+            if tl.time_to_act:
+                rew[tl.ID] = tl.calculate_reward(self.lanes_count, type=self.reward_type)
+                tl.reset_measures()
+        self.rewards.update(rew)
+        return {ts: self.rewards[ts] for ts in self.rewards.keys() if self.intersections[ts].time_to_act}
 
     def observe(self, agent):
         """
@@ -246,8 +270,10 @@ class Environment(gym.Env):
         self.eng.reset(seed=False)
         self.eng.set_random_seed(seed)
 
-        self._warmup()
-        self.eng.set_save_replay(True)
+        self.vehicles = {}
+        if self.fixed_num_vehicles:
+            self._warmup()
+        # self.eng.set_save_replay(True)
 
         self.time = 0
         for agent in self.agents:
@@ -275,7 +301,7 @@ class Environment(gym.Env):
     def get_mfd_data(self, time_window=60):
         mfd_detailed = {}
 
-        for lane_id in self.eng.get_lane_vehicles().keys():
+        for lane_id in self.lane_vehs.keys():
             mfd_detailed[lane_id] = {"speed": [], "density": []}
 
         for lane_id, lane in self.lanes.items():
@@ -298,21 +324,114 @@ class Environment(gym.Env):
 
         return mfd_detailed
 
-    def vote_drivers(self):
-        votes = {'speed': 0, 'wait': 0, 'stops': 0}
-        # votes = []
-        for intersection in self.intersections.values():
-            lane_vehicles = self.eng.get_lane_vehicles()
-            for lane_id in intersection.approach_lanes:
-                for veh_id in lane_vehicles[lane_id]:
-                    # votes[self.vehicles[veh_id].get_vote()] += 1
-                    votes[self.vehicles[veh_id].preference] += 1
+    def distribute_points(self, vehicle_ids, pref_types, total_points, scenario):
+        preferences_dict = {}
 
-        # return Counter(votes)
+        for i, veh_id in enumerate(vehicle_ids):
+            prob = self.rng.random()
+            group = "A"
+            if scenario == 'bipolar':  # Bipolar Preference Distribution
+                if prob < 0.5:
+                    stop_points = self.rng.normal(0.9, 0.05) * total_points
+                    points = [0, stop_points, total_points - stop_points]
+                else:
+                    group = "B"
+                    wait_points = self.rng.normal(0.9, 0.05) * total_points
+                    points = [0, total_points - wait_points, wait_points]
+
+            elif scenario == 'majority_extreme':  # Extreme Majority-Minority Polarization
+                if prob < 0.2:
+                    stop_points = self.rng.normal(0.9, 0.025) * total_points
+                    points = [0, stop_points, total_points - stop_points]
+                else:
+                    group = "B"
+                    wait_points = self.rng.normal(0.6, 0.05) * total_points
+                    points = [0, total_points - wait_points, wait_points]
+
+            elif scenario == 'random':  # Random Distribution
+                group = "B"
+                points = self.rng.multinomial(total_points*100, np.ones(2) / 2)/100
+                points = [0] + list(points)
+
+            elif 'stops' in scenario:
+                group = "B"
+                points = [0, total_points, 0]
+
+            elif 'waits' in scenario:
+                group = "B"
+                points = [0, 0, total_points]
+
+            else: # catchall clause, probably external benchmark algorithm
+                points = self.rng.multinomial(total_points*100, np.ones(2) / 2)/100
+                points = [0] + list(points)
+
+            preferences_dict[veh_id] = {pref: point for pref, point in zip(pref_types, points)}
+            self.vehicles[veh_id].preference = preferences_dict[veh_id]  # Assign the preferences to each vehicle.
+            self.vehicles[veh_id].group = group
+        return preferences_dict
+
+    def vote_drivers(self, total_points, point_voting=False, binary=False):
+        votes = {tl_id: {'speed': 0, 'wait': 0, 'stops': 0} for tl_id, tl in self.intersections.items()}
+
+        lane_vehicles = self.lane_vehs
+        for tl_id, intersection in self.intersections.items():
+            for lane_id in intersection.in_lanes:
+                for veh_id in lane_vehicles[lane_id]:
+                    prefvals = self.vehicles[veh_id].preference.values()
+                    max_points = max(prefvals)
+                    tiebreaker = random.choice([k for k,v in self.vehicles[veh_id].preference.items() if v==max_points])
+                    # Sum up the scores based on the preferences of the vehicles.
+                    for pref_type, _points in self.vehicles[veh_id].preference.items():
+                        points = _points
+                        if binary: # binarizes to total_points
+                            points = total_points*(_points==max_points and pref_type==tiebreaker)
+                        votes[tl_id][pref_type] += points
         return votes
 
-    def assign_driver_preferences(self, vehicle_ids, pref_types, weights):
-        preferences_dict = {id: np.random.choice(pref_types, p=weights) for id in vehicle_ids}
+    def assign_driver_preferences(self, vehicle_ids, pref_types, weights=None, total_points=None, scenario=None):
+        if total_points and scenario:  # If point-based preference is enabled
+            preferences_dict = self.distribute_points(vehicle_ids, pref_types, total_points, scenario)
+        # else:
+            # print("WARNING SHOULD NOT BE HAPPENING")
+            # choice = self.rng.choice(pref_types, p=weights)
+            # preferences_dict = {id: {i: int(i == choice) for i in pref_types} for id in vehicle_ids}
 
-        for veh_id, preference in preferences_dict.items():
-            self.vehicles[veh_id].preference = preference
+            # for veh_id, preference in preferences_dict.items():
+            #     self.vehicles[veh_id].preference = preference
+
+    def get_driver_satisfaction(self, agent_id, raw_net):
+        lane_vehicles = self.lane_vehs
+        act_idx = raw_net["reference"]
+        for lane_id in self.intersections[agent_id].in_lanes:
+            for veh_id in lane_vehicles[lane_id]:
+                score = 0
+                score_denom = 0
+                all_score = 0
+                all_denom = 0
+                for pref_type, points in self.vehicles[veh_id].preference.items():
+                    qvals_pref = np.array(raw_net['qvals'][pref_type])
+                    # score += qvals_pref[act_idx]*points
+                    # score_denom += qvals_pref[act_idx]
+                    all_score += qvals_pref*points
+                    all_denom += qvals_pref
+                utility = all_score/all_denom
+
+                satisfaction = utility[act_idx]
+                dissatisfaction = np.max(utility) - satisfaction
+
+                self.vehicles[veh_id].satisfactions.append(satisfaction)
+                self.vehicles[veh_id].dissatisfactions.append(dissatisfaction)
+
+    def get_driver_alignment(self, agent_id, raw_net):
+        intersection_alignments = []
+        lane_vehicles = self.lane_vehs
+        for lane_id in self.intersections[agent_id].in_lanes:
+            for veh_id in lane_vehicles[lane_id]:
+                score = 0
+                for pref_type, points in self.vehicles[veh_id].preference.items():
+                    if raw_net["reference"] == raw_net[pref_type]:
+                        score += points
+                alignment = score/sum(self.vehicles[veh_id].preference.values())
+                intersection_alignments.append(alignment)
+                self.vehicles[veh_id].alignments.append(alignment)
+        return intersection_alignments

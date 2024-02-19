@@ -1,5 +1,6 @@
 import json
 import os
+import numpy as np
 
 DEFAULT_VEHICLE = {
       "length": 5.0,
@@ -13,7 +14,14 @@ DEFAULT_VEHICLE = {
       "headwayTime": 1.5
     }
 
+NAME_MAPPER = {
+    "localwait": "wait",
+    "unique_stops": "stops"
+}
 
+def div0(a,b):
+    return np.divide(a, b, out=np.zeros_like(a), where=b!=0)
+    
 def config_creator(dir, n_vehs, reward='speed', logpath=None):
     dir = os.path.abspath(dir)
     

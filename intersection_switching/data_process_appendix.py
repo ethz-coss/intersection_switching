@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import glob
 from radar_plot import ComplexRadar 
+import seaborn as sns
 
 low_balanced = [11, 11]
 low_unbalanced = [11, 6]
@@ -139,17 +140,28 @@ all_names = data['all_names']
 plt.rcParams.update({'font.size': 12})
 b1,b2, b3 = 0,0,0
 
-for label, traffic in traffic_dict.items():
+# for label, traffic in traffic_dict.items():
 
-    _labels = [f"{'_'.join(map(str,traffic))}"]
+#     _labels = [f"{'_'.join(map(str,traffic))}"]
 
-    b1 = max(b1, max([x[0] for ll in _labels for x in all_data[ll] ]))
-    b2 = max(b2, max([x[1] for ll in _labels for x in all_data[ll] ]))
-    b3 = max(b3, max([x[2] for ll in _labels for x in all_data[ll] ]))
-ranges = [(0, b1),
-            (b2, 0),
-            (b3, 0)]
+#     b1 = max(b1, max([x[0] for ll in _labels for x in all_data[ll] ]))
+#     b2 = max(b2, max([x[1] for ll in _labels for x in all_data[ll] ]))
+#     b3 = max(b3, max([x[2] for ll in _labels for x in all_data[ll] ]))
+# ranges = [(0, b1),
+#             (b2, 0),
+#             (b3, 0)]
     
+
+colors = sns.color_palette(None, 6)
+names_color_map = {'Stops': colors[1],
+                    'Wait Times': colors[2],
+                    'Prop S+W': colors[0],
+                    'Major S+W': colors[3],
+                    'Linear comb.': colors[4],
+                    'Cobb Doug': colors[5]
+                    }
+
+
 # for key, data in all_data.items():
 for label, traffic in traffic_dict.items():
     _labels = f"{'_'.join(map(str,traffic))}"
@@ -160,6 +172,7 @@ for label, traffic in traffic_dict.items():
     key = f"{'_'.join(map(str,traffic))}"
     data = all_data[key]
     names = all_names[key]
+
 
     b1 = max([x[0] for x in data ])
     b2 = max([x[1] for x in data ])
@@ -176,10 +189,12 @@ for label, traffic in traffic_dict.items():
 
     variables = ('Speed', 'Stops', 'Wait Time')
     radar = ComplexRadar(axes, variables, ranges)
-
     for d, name in zip(data, names):
-        radar.plot(d, label=name)
-        radar.fill(d, alpha=0.2)
+        labelname = name
+        if 'Cobb' in name:
+            labelname = "Cobb–Doug"
+        radar.plot(d, label=labelname, color=names_color_map[name])
+        radar.fill(d, alpha=0.2, color=names_color_map[name])
 
     fig1.legend()
 
@@ -198,7 +213,7 @@ for label, traffic in traffic_dict.items():
     #         axes.set_title("High Balanced")
     #     else:
     #         axes.set_title("High Unbalanced")
-    axes.set_title(' '.join(label))
+    axes.set_title(' '.join([x.capitalize() for x in label]))
 
 
     fig1.savefig(save_name, format='pdf', bbox_inches='tight')
