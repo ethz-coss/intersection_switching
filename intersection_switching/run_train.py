@@ -5,6 +5,7 @@ IS_SLURM = which('sbatch') is not None
 
 # reward_types = ["stops", "speed", "wait"]
 reward_types = ['stops', 'wait', 'localwait', "unique_stops"]
+
 sim_steps = 3600
 episodes = 400
 
@@ -16,6 +17,7 @@ configs = ['../scenarios/hangzhou/1.config',
 learning_rates = {'stops': 0.005,'unique_stops': 0.005,
                   'wait': 0.025,
                   'localwait': 0.025}
+
 decays = {'stops': 0.00005,
             'unique_stops': 0.00005,
                   'wait': 0.00005,
@@ -32,4 +34,4 @@ for config in configs:
         else:
             os.system(f'{pycalls} &')
     #     break
-    # break
+
