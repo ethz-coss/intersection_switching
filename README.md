@@ -1,4 +1,6 @@
 # voting_traffic
+This repository contains the code needed to run the simulations detailed in our paper, 
+[Democratizing traffic control in smart cities](https://doi.org/10.1016/j.trc.2024.104511).
 
 
 ## Setup
@@ -22,3 +24,19 @@ Training scripts may be found in `intersection_switching/run_train.py`. Use this
 
 ## Running experiments
 Training scripts may be found in `intersection_switching/run_vote.py`.
+
+
+## Citing
+If you have found any part of this work useful or relevant to your research, please cite our article:
+
+```
+@article{Korecki2024,
+  title = {Democratizing Traffic Control in Smart Cities},
+  doi = {10.1016/j.trc.2024.104511},
+  journal = {Transportation Research Part C: Emerging Technologies},
+  author = {Korecki,  Marcin and Dailisan,  Damian and Yang,  Joshua and Helbing,  Dirk},
+  year = {2024},
+  vol = {160},
+  pages = {104511}
+}
+```
